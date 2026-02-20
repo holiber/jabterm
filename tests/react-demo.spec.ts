@@ -14,9 +14,42 @@ test.describe("React demo page", () => {
     const term1 = page.locator('[data-testid="jabterm-1"] .xterm-screen');
     await expect(term1).toBeVisible({ timeout: 15_000 });
 
+    const state1 = page.locator('[data-testid="jabterm-1"] [data-jabterm-state]');
+    await expect(state1).toHaveAttribute("data-jabterm-state", "open", {
+      timeout: 15_000,
+    });
+
     const container = page.locator('[data-testid="jabterm-1"]');
     const before = await container.boundingBox();
     expect(before).not.toBeNull();
+
+    // Imperative handle smoke: focus + fit should not throw.
+    await page.evaluate(() => {
+      // @ts-ignore
+      const ref = window.__jabterm?.term1;
+      if (!ref?.current) throw new Error("Missing term1 ref");
+      ref.current.focus();
+      ref.current.fit();
+    });
+
+    const SENTINEL = `__JABTERM_READNEW_${Date.now()}__`;
+    await page.evaluate((s) => {
+      // @ts-ignore
+      const ref = window.__jabterm?.term1;
+      if (!ref?.current) throw new Error("Missing term1 ref");
+      ref.current.send(`echo ${s}\n`);
+    }, SENTINEL);
+    await page.waitForFunction(() => {
+      // @ts-ignore
+      const ref = window.__jabterm?.term1;
+      return !!ref?.current && ref.current.getNewCount() > 0;
+    });
+    const newOut = await page.evaluate(() => {
+      // @ts-ignore
+      const ref = window.__jabterm?.term1;
+      return ref.current.readNew();
+    });
+    expect(newOut).toContain(SENTINEL);
 
     await page.getByTestId("toggle-term-1").click();
     await expect(page.getByTestId("unmounted-1")).toBeVisible();
@@ -44,6 +77,11 @@ test.describe("React demo page", () => {
 
     const rows = page.locator('[data-testid="jabterm-1"] .xterm-rows');
     await expect(rows).toContainText("Connection closed", { timeout: 15_000 });
+
+    const state1 = page.locator('[data-testid="jabterm-1"] [data-jabterm-state]');
+    await expect(state1).toHaveAttribute("data-jabterm-state", "closed", {
+      timeout: 15_000,
+    });
   });
 });
 
