@@ -1,8 +1,76 @@
 import { test, expect } from "@playwright/test";
 import fs from "fs";
+import os from "os";
 import path from "path";
+import { spawnSync } from "child_process";
 
 const OUTPUT_VIDEO = path.resolve("docs/demo.webm");
+const OUTPUT_GIF = path.resolve("docs/demo.gif");
+
+function resolveFfmpegPath(): string {
+  if (process.platform === "win32") {
+    throw new Error("GIF generation is currently supported only on Unix-like OSes.");
+  }
+  const probe = spawnSync("bash", ["-lc", "command -v ffmpeg"], {
+    encoding: "utf8",
+  });
+  const resolved = (probe.stdout || "").trim();
+  if (probe.status === 0 && resolved) return resolved;
+  throw new Error(
+    "Could not find `ffmpeg` on PATH. Install ffmpeg to generate docs/demo.gif.",
+  );
+}
+
+function generateGifFromWebm(webmPath: string, gifPath: string): void {
+  const ffmpeg = resolveFfmpegPath();
+  const tmpPalette = path.join(os.tmpdir(), `jabterm_palette_${Date.now()}.png`);
+  const fps = 12;
+  const width = 720;
+  const scale = `scale=${width}:-1:flags=lanczos`;
+
+  const paletteGen = spawnSync(ffmpeg, [
+    "-y",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-i",
+    webmPath,
+    "-vf",
+    `fps=${fps},${scale},palettegen`,
+    tmpPalette,
+  ]);
+  if (paletteGen.status !== 0) {
+    throw new Error(
+      `ffmpeg palettegen failed (exit ${paletteGen.status}).\n` +
+        `${paletteGen.stderr?.toString() || ""}`,
+    );
+  }
+
+  const paletteUse = spawnSync(ffmpeg, [
+    "-y",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-i",
+    webmPath,
+    "-i",
+    tmpPalette,
+    "-lavfi",
+    `fps=${fps},${scale}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3`,
+    gifPath,
+  ]);
+  try {
+    fs.unlinkSync(tmpPalette);
+  } catch {
+    // ignore
+  }
+  if (paletteUse.status !== 0) {
+    throw new Error(
+      `ffmpeg paletteuse failed (exit ${paletteUse.status}).\n` +
+        `${paletteUse.stderr?.toString() || ""}`,
+    );
+  }
+}
 
 test.use({
   video: {
@@ -85,5 +153,9 @@ test.describe("Terminal - demo video", () => {
     await video!.saveAs(OUTPUT_VIDEO);
     const size = fs.statSync(OUTPUT_VIDEO).size;
     expect(size).toBeGreaterThan(0);
+
+    generateGifFromWebm(OUTPUT_VIDEO, OUTPUT_GIF);
+    const gifSize = fs.statSync(OUTPUT_GIF).size;
+    expect(gifSize).toBeGreaterThan(0);
   });
 });
