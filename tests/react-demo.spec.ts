@@ -32,6 +32,25 @@ test.describe("React demo page", () => {
       ref.current.fit();
     });
 
+    const SENTINEL = `__JABTERM_READNEW_${Date.now()}__`;
+    await page.evaluate((s) => {
+      // @ts-ignore
+      const ref = window.__jabterm?.term1;
+      if (!ref?.current) throw new Error("Missing term1 ref");
+      ref.current.send(`echo ${s}\n`);
+    }, SENTINEL);
+    await page.waitForFunction(() => {
+      // @ts-ignore
+      const ref = window.__jabterm?.term1;
+      return !!ref?.current && ref.current.getNewCount() > 0;
+    });
+    const newOut = await page.evaluate(() => {
+      // @ts-ignore
+      const ref = window.__jabterm?.term1;
+      return ref.current.readNew();
+    });
+    expect(newOut).toContain(SENTINEL);
+
     await page.getByTestId("toggle-term-1").click();
     await expect(page.getByTestId("unmounted-1")).toBeVisible();
 

@@ -98,6 +98,25 @@ test.describe("Server API — createJabtermServer", () => {
     expect(isRunningAfter).toBe(false);
   });
 
+  test("rejects hello protocol version mismatch with error frame", async () => {
+    const server = createJabtermServer({
+      host: "127.0.0.1",
+      port: 0,
+      path: "/ws",
+    });
+    const addr = await server.listen();
+
+    const ws = new WsClient(wsUrl(addr.port, "/ws/mismatch"));
+    await waitForWsOpen(ws);
+    ws.send(JSON.stringify({ type: "hello", version: 999 }));
+
+    const raw = await waitForMatch(ws, /"type"\s*:\s*"error"/, 8000);
+    expect(raw).toContain("Protocol mismatch");
+
+    await new Promise((resolve) => ws.once("close", resolve));
+    await server.close();
+  });
+
   test("supports authenticate hook", async () => {
     const TOKEN = "secret-token";
     const server = createJabtermServer({

@@ -107,12 +107,22 @@ CI also regenerates these assets on pushes to `main` (so contributors typically 
 | `onOpen` | `() => void` | — | Fires when the WebSocket becomes open |
 | `onClose` | `(ev: CloseEvent) => void` | — | Fires when the WebSocket closes |
 | `onError` | `(ev: Event) => void` | — | Fires on WebSocket errors |
+| `captureOutput` | `boolean` | `true` | Capture output for imperative `read*()` methods |
+| `maxCaptureChars` | `number` | `200000` | Max captured output size (characters) |
 | `className` | `string` | — | CSS class for the outer container |
 | `fontSize` | `number` | `13` | Font size in pixels |
 | `fontFamily` | `string` | system monospace | Font family |
 | `theme` | `{ background?, foreground?, cursor? }` | `{ background: "#1e1e1e" }` | xterm.js theme overrides |
 
 The outer container also exposes `data-jabterm-state="connecting|open|closed"` to make UI tests (e.g. Playwright) wait reliably.
+
+### Imperative API (`JabTermHandle`)
+
+`<JabTerm ref={...} />` exposes:
+
+- `focus()`, `fit()`, `resize(cols, rows)`, `paste(text)`, `send(data)`
+- `getXterm()` to access the underlying xterm instance
+- `readAll()`, `readLast(n)`, `readNew()`, `getNewCount()` for testing/automation
 
 ### `createJabtermServer(options?)`
 
@@ -132,6 +142,14 @@ console.log(server.address()); // { address, family, port }
 ```
 
 The WebSocket endpoint supports per-session routing: connect to `${path}/:terminalId` (e.g. `/ws/my-terminal`).
+
+### `setDocumentTitle(title)`
+
+Optional client-side helper:
+
+```ts
+import { setDocumentTitle } from "jabterm/react";
+```
 
 ## Security notes
 

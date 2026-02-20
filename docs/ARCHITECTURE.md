@@ -93,13 +93,15 @@ JabTerm uses a simple multiplexed protocol over a single WebSocket connection:
 | Direction | Frame Type | Content | Purpose |
 |-----------|-----------|---------|---------|
 | Client -> Server | Binary | Raw bytes | Terminal input (keystrokes) |
+| Client -> Server | Text (JSON) | `{"type":"hello","version":1}` | Optional protocol negotiation / mismatch detection |
 | Client -> Server | Text (JSON) | `{"type":"resize","cols":N,"rows":N}` | Resize PTY |
 | Server -> Client | Text | Raw terminal output | Display in xterm.js |
+| Server -> Client | Text (JSON) | `{"type":"error","message":"..."}` | Structured error reporting for UI/tests |
 
 ### Control Message Detection
 
 The server uses a heuristic: if a text frame starts with `{`, it attempts to parse it as JSON.
-If parsing succeeds and `type === "resize"`, it is treated as a control message.
+If parsing succeeds and `type` is a known control message (e.g. `hello`, `resize`), it is treated as a control message.
 Otherwise, the frame is written to the PTY as input.
 
 ### Resize Safety

@@ -8,6 +8,8 @@ import type { JabTermHandle, JabTermProps, JabTermState } from "./types.js";
 const DEFAULT_FONT_FAMILY =
   "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
 
+const JABTERM_PROTOCOL_VERSION = 1;
+
 const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
   {
     wsUrl,
@@ -15,6 +17,8 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
     onOpen,
     onClose,
     onError,
+    captureOutput = true,
+    maxCaptureChars = 200_000,
     className,
     fontSize = 13,
     fontFamily = DEFAULT_FONT_FAMILY,
@@ -29,6 +33,36 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
   const closingByCleanupRef = useRef(false);
   const disposedRef = useRef(false);
   const [state, setState] = useState<JabTermState>("connecting");
+
+  const captureEnabledRef = useRef<boolean>(captureOutput);
+  const captureMaxCharsRef = useRef<number>(maxCaptureChars);
+  const captureChunksRef = useRef<string[]>([]);
+  const captureTotalRef = useRef<number>(0);
+  const captureReadOffsetRef = useRef<number>(0);
+  const decoderRef = useRef<TextDecoder | null>(null);
+
+  captureEnabledRef.current = captureOutput;
+  captureMaxCharsRef.current = maxCaptureChars;
+
+  const appendCapture = (chunk: string) => {
+    if (!captureEnabledRef.current) return;
+    if (!chunk) return;
+    const chunks = captureChunksRef.current;
+    chunks.push(chunk);
+    captureTotalRef.current += chunk.length;
+
+    const max = Math.max(captureMaxCharsRef.current || 0, 1_000);
+    while (captureTotalRef.current > max && chunks.length > 0) {
+      const removed = chunks.shift()!;
+      captureTotalRef.current -= removed.length;
+      captureReadOffsetRef.current = Math.max(
+        0,
+        captureReadOffsetRef.current - removed.length,
+      );
+    }
+  };
+
+  const getCaptured = () => captureChunksRef.current.join("");
 
   useImperativeHandle(
     ref,
@@ -98,6 +132,30 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
       getXterm() {
         return xtermRef.current;
       },
+      readAll() {
+        const s = getCaptured();
+        captureReadOffsetRef.current = s.length;
+        return s;
+      },
+      readLast(lines: number) {
+        const s = getCaptured();
+        const n = Math.max(Number(lines) || 0, 0);
+        if (n === 0) return "";
+        const parts = s.split(/\r?\n/);
+        return parts.slice(Math.max(0, parts.length - n)).join("\n");
+      },
+      readNew() {
+        const s = getCaptured();
+        const start = Math.min(Math.max(captureReadOffsetRef.current, 0), s.length);
+        const out = s.slice(start);
+        captureReadOffsetRef.current = s.length;
+        return out;
+      },
+      getNewCount() {
+        const s = getCaptured();
+        const start = Math.min(Math.max(captureReadOffsetRef.current, 0), s.length);
+        return s.length - start;
+      },
     }),
     [],
   );
@@ -135,6 +193,11 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
       if (disposedRef.current) return;
       setState("open");
       onOpen?.();
+      try {
+        ws.send(JSON.stringify({ type: "hello", version: JABTERM_PROTOCOL_VERSION }));
+      } catch {
+        /* ignore */
+      }
       fitAddon.fit();
       const cols = Math.max(term.cols || 80, 80);
       const rows = Math.max(term.rows || 24, 24);
@@ -144,9 +207,30 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
     ws.onmessage = (event) => {
       if (disposedRef.current) return;
       if (typeof event.data === "string") {
+        if (event.data.startsWith("{")) {
+          try {
+            const parsed = JSON.parse(event.data) as any;
+            if (parsed?.type === "error" && typeof parsed.message === "string") {
+              const msg = parsed.message.replace(/\r?\n/g, " ").slice(0, 500);
+              term.write(`\r\n\x1b[31mError: ${msg}\x1b[0m\r\n`);
+              appendCapture(`\nError: ${msg}\n`);
+              return;
+            }
+          } catch {
+            /* ignore */
+          }
+        }
         term.write(event.data);
+        appendCapture(event.data);
       } else {
-        term.write(new Uint8Array(event.data as ArrayBuffer));
+        const bytes = new Uint8Array(event.data as ArrayBuffer);
+        term.write(bytes);
+        try {
+          if (!decoderRef.current) decoderRef.current = new TextDecoder();
+          appendCapture(decoderRef.current.decode(bytes, { stream: true }));
+        } catch {
+          /* ignore */
+        }
       }
     };
 
@@ -226,8 +310,16 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
       xtermRef.current = null;
       fitAddonRef.current = null;
       wsRef.current = null;
+      decoderRef.current = null;
     };
-  }, [wsUrl, fontSize, fontFamily, theme?.background, theme?.foreground, theme?.cursor]);
+  }, [
+    wsUrl,
+    fontSize,
+    fontFamily,
+    theme?.background,
+    theme?.foreground,
+    theme?.cursor,
+  ]);
 
   return (
     <div
