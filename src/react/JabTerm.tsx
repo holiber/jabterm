@@ -84,7 +84,12 @@ export default function JabTerm({
     });
 
     const handleResize = () => {
-      fitAddon.fit();
+      if (disposedRef.current) return;
+      try {
+        fitAddon.fit();
+      } catch {
+        /* ignore */
+      }
       if (ws.readyState === WebSocket.OPEN) {
         const cols = Math.max(term.cols || 80, 80);
         const rows = Math.max(term.rows || 24, 24);
@@ -93,6 +98,11 @@ export default function JabTerm({
     };
 
     window.addEventListener("resize", handleResize);
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => handleResize())
+        : null;
+    resizeObserver?.observe(terminalRef.current);
     const initialResizeTimeout = window.setTimeout(handleResize, 100);
 
     return () => {
@@ -100,6 +110,11 @@ export default function JabTerm({
       disposedRef.current = true;
       window.removeEventListener("resize", handleResize);
       window.clearTimeout(initialResizeTimeout);
+      try {
+        resizeObserver?.disconnect();
+      } catch {
+        /* ignore */
+      }
       try {
         ws.onopen = null;
         ws.onmessage = null;
