@@ -66,6 +66,8 @@ export async function createTerminalServer(
         env,
       });
       ptys.add(ptyProcess);
+      let ptyExited = false;
+      let wsClosed = false;
 
       ptyProcess.onData((data: string) => {
         if (ws.readyState === WebSocket.OPEN) {
@@ -73,7 +75,19 @@ export async function createTerminalServer(
         }
       });
 
-      ws.on("message", (message: Buffer | string) => {
+      const onWsMessage = (message: Buffer | string) => {
+        if (wsClosed) return;
+        if (ptyExited) {
+          try {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.close(1011, "pty_exited");
+            }
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
         let handled = false;
 
         try {
@@ -102,27 +116,43 @@ export async function createTerminalServer(
             console.error("[jabterm] Error writing to PTY:", err);
           }
         }
-      });
+      };
+
+      ws.on("message", onWsMessage);
 
       ws.on("close", () => {
+        wsClosed = true;
         console.log("[jabterm] Client disconnected");
         try {
-          ptyProcess.kill();
+          if (!ptyExited) ptyProcess.kill();
         } catch {
           /* ignore */
         }
       });
 
       ptyProcess.onExit(({ exitCode, signal }) => {
+        ptyExited = true;
         console.log(
           `[jabterm] Process exited (code: ${exitCode}, signal: ${signal})`,
         );
         ptys.delete(ptyProcess);
-        ws.close();
+        try {
+          ws.off("message", onWsMessage);
+        } catch {
+          /* ignore */
+        }
+        if (!wsClosed && ws.readyState === WebSocket.OPEN) {
+          const ok = exitCode === 0;
+          ws.close(ok ? 1000 : 1011, ok ? "pty_exit" : "pty_error");
+        }
       });
     } catch (err) {
       console.error("[jabterm] Failed to spawn pty:", err);
-      ws.close();
+      try {
+        ws.close(1011, "pty_spawn_failed");
+      } catch {
+        ws.close();
+      }
     }
   });
 
