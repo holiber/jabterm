@@ -53,7 +53,7 @@ test.describe("Terminal — README screenshots", () => {
     // Create a sample file with some content, then open a TUI editor
     await term2.click();
     await page.keyboard.type(
-      'printf "#!/bin/bash\\n\\n# JabTerm Demo Script\\necho \\"Hello World\\"\\n\\nfor i in 1 2 3; do\\n  echo \\"Count: $i\\"\\ndone\\n" > /tmp/jabterm_demo.sh && if command -v vim >/dev/null 2>&1; then vim -u NONE -i NONE -n /tmp/jabterm_demo.sh; else vi /tmp/jabterm_demo.sh; fi',
+      'printf "#!/bin/bash\\n\\n# JabTerm Demo Script\\necho \\"Hello World\\"\\n\\nfor i in 1 2 3; do\\n  echo \\"Count: $i\\"\\ndone\\n" > /tmp/jabterm_demo.sh && vi -n /tmp/jabterm_demo.sh',
       { delay: 10 },
     );
     await page.keyboard.press("Enter");
