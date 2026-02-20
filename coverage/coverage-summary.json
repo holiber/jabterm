@@ -2,15 +2,15 @@
   "total": {
     "lines": {
       "total": 881,
-      "covered": 826,
+      "covered": 825,
       "skipped": 0,
-      "pct": 93.75
+      "pct": 93.64
     },
     "statements": {
       "total": 881,
-      "covered": 826,
+      "covered": 825,
       "skipped": 0,
-      "pct": 93.75
+      "pct": 93.64
     },
     "functions": {
       "total": 25,
@@ -19,10 +19,10 @@
       "pct": 84
     },
     "branches": {
-      "total": 92,
-      "covered": 74,
+      "total": 90,
+      "covered": 73,
       "skipped": 0,
-      "pct": 80.43
+      "pct": 81.11
     },
     "branchesTrue": {
       "total": 0,
@@ -268,9 +268,9 @@
   "./tests/server-api.spec.ts": {
     "lines": {
       "total": 242,
-      "covered": 235,
+      "covered": 234,
       "skipped": 0,
-      "pct": 97.1
+      "pct": 96.69
     },
     "functions": {
       "total": 13,
@@ -280,15 +280,15 @@
     },
     "statements": {
       "total": 242,
-      "covered": 235,
+      "covered": 234,
       "skipped": 0,
-      "pct": 97.1
+      "pct": 96.69
     },
     "branches": {
-      "total": 37,
-      "covered": 32,
+      "total": 35,
+      "covered": 31,
       "skipped": 0,
-      "pct": 86.48
+      "pct": 88.57
     }
   },
   "./tests/video.spec.ts": {
