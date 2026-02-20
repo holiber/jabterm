@@ -2,9 +2,11 @@
 
 **Just Another Browser Terminal** — drop-in React component + Node.js server for embedding real terminals in web apps.
 
-<a href="docs/demo.webm">
-  <img src="docs/demo.gif" alt="JabTerm demo" width="520" style="max-width: 100%;" />
-</a>
+<p align="center">
+  <a href="docs/demo.webm">
+    <img src="docs/demo.gif" alt="JabTerm demo" width="520" style="max-width: 100%;" />
+  </a>
+</p>
 
 *Click to open `docs/demo.webm` (higher quality than GIF).*
 
