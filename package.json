@@ -26,6 +26,7 @@
     "build": "tsc -p tsconfig.server.json && tsc -p tsconfig.react.json",
     "prepack": "pnpm build",
     "test": "pnpm exec playwright test",
+    "dev:demo": "node scripts/dev-demo.mjs",
     "dev:server": "node bin/jabterm-server.mjs"
   },
   "dependencies": {

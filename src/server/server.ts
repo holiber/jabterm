@@ -4,13 +4,14 @@ import os from "os";
 import {
   assertPortFree,
   ensureNodePtySpawnHelperExecutable,
+  resolveDefaultShell,
   safeLocale,
 } from "./utils.js";
 
 export interface TerminalServerOptions {
   /** Port to listen on. Default: 3223 */
   port?: number;
-  /** Shell to spawn. Default: /bin/zsh (macOS/Linux) or powershell.exe (Windows) */
+  /** Shell to spawn. Default: $SHELL when available; otherwise bash/sh on Linux and zsh/bash/sh on macOS (powershell.exe on Windows). */
   shell?: string;
   /** Working directory for new terminals. Default: $HOME or cwd */
   cwd?: string;
@@ -31,9 +32,7 @@ export async function createTerminalServer(
 ): Promise<TerminalServer> {
   const port = opts?.port ?? 3223;
   const host = opts?.host ?? "127.0.0.1";
-  const shell =
-    opts?.shell ??
-    (os.platform() === "win32" ? "powershell.exe" : "/bin/zsh");
+  const shell = resolveDefaultShell(opts?.shell);
   const cwd = opts?.cwd ?? process.env.HOME ?? process.cwd();
   const strictPort = opts?.strictPort ?? false;
 
@@ -67,6 +66,8 @@ export async function createTerminalServer(
         env,
       });
       ptys.add(ptyProcess);
+      let ptyExited = false;
+      let wsClosed = false;
 
       ptyProcess.onData((data: string) => {
         if (ws.readyState === WebSocket.OPEN) {
@@ -74,7 +75,19 @@ export async function createTerminalServer(
         }
       });
 
-      ws.on("message", (message: Buffer | string) => {
+      const onWsMessage = (message: Buffer | string) => {
+        if (wsClosed) return;
+        if (ptyExited) {
+          try {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.close(1011, "pty_exited");
+            }
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
         let handled = false;
 
         try {
@@ -103,27 +116,43 @@ export async function createTerminalServer(
             console.error("[jabterm] Error writing to PTY:", err);
           }
         }
-      });
+      };
+
+      ws.on("message", onWsMessage);
 
       ws.on("close", () => {
+        wsClosed = true;
         console.log("[jabterm] Client disconnected");
         try {
-          ptyProcess.kill();
+          if (!ptyExited) ptyProcess.kill();
         } catch {
           /* ignore */
         }
       });
 
       ptyProcess.onExit(({ exitCode, signal }) => {
+        ptyExited = true;
         console.log(
           `[jabterm] Process exited (code: ${exitCode}, signal: ${signal})`,
         );
         ptys.delete(ptyProcess);
-        ws.close();
+        try {
+          ws.off("message", onWsMessage);
+        } catch {
+          /* ignore */
+        }
+        if (!wsClosed && ws.readyState === WebSocket.OPEN) {
+          const ok = exitCode === 0;
+          ws.close(ok ? 1000 : 1011, ok ? "pty_exit" : "pty_error");
+        }
       });
     } catch (err) {
       console.error("[jabterm] Failed to spawn pty:", err);
-      ws.close();
+      try {
+        ws.close(1011, "pty_spawn_failed");
+      } catch {
+        ws.close();
+      }
     }
   });
 

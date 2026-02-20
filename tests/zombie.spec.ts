@@ -7,57 +7,12 @@
 
 import { test, expect } from "@playwright/test";
 import { WebSocket as WsClient } from "ws";
+import { defaultWsUrl, sendCommand, waitForMatch } from "./helpers/ws.js";
 
-const WS_URL =
-  process.env.JABTERM_WS_URL ||
-  `ws://127.0.0.1:${process.env.JABTERM_PORT || "3223"}`;
+const WS_URL = defaultWsUrl();
 const CLEANUP_DELAY_MS = 1500;
 
 test.describe.configure({ mode: "serial" });
-
-function waitForMatch(
-  ws: WsClient,
-  pattern: RegExp,
-  timeoutMs: number,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const startedAt = Date.now();
-    let buf = "";
-
-    const onMessage = (data: Buffer | string) => {
-      buf += data.toString();
-      if (pattern.test(buf)) cleanup(true);
-    };
-    const onError = (err: unknown) => cleanup(false, err);
-    const onClose = () => cleanup(false, new Error("WebSocket closed"));
-
-    const timer = setInterval(() => {
-      if (Date.now() - startedAt > timeoutMs) {
-        cleanup(
-          false,
-          new Error(`Timeout waiting for ${pattern}. Last output:\n${buf}`),
-        );
-      }
-    }, 50);
-
-    function cleanup(ok: boolean, err?: unknown) {
-      clearInterval(timer);
-      ws.off("message", onMessage);
-      ws.off("error", onError);
-      ws.off("close", onClose);
-      if (ok) resolve(buf);
-      else reject(err);
-    }
-
-    ws.on("message", onMessage);
-    ws.once("error", onError);
-    ws.once("close", onClose);
-  });
-}
-
-function sendCommand(ws: WsClient, cmd: string): void {
-  ws.send(Buffer.from(cmd + "\n"));
-}
 
 test.describe("Terminal — zombie process prevention", () => {
   test("pty process is killed when websocket closes", async () => {
