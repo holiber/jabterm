@@ -93,12 +93,13 @@ export default function JabTerm({
     };
 
     window.addEventListener("resize", handleResize);
-    setTimeout(handleResize, 100);
+    const initialResizeTimeout = window.setTimeout(handleResize, 100);
 
     return () => {
       closingByCleanupRef.current = true;
       disposedRef.current = true;
       window.removeEventListener("resize", handleResize);
+      window.clearTimeout(initialResizeTimeout);
       try {
         ws.onopen = null;
         ws.onmessage = null;
@@ -113,6 +114,7 @@ export default function JabTerm({
         /* ignore */
       }
       term.dispose();
+      xtermRef.current = null;
     };
   }, [wsUrl, fontSize, fontFamily, theme?.background, theme?.foreground, theme?.cursor]);
 
