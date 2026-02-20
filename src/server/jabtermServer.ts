@@ -1,5 +1,5 @@
 import http, { type IncomingMessage } from "http";
-import type { Socket } from "net";
+import type { Duplex } from "stream";
 import os from "os";
 import * as pty from "node-pty";
 import { WebSocketServer, WebSocket } from "ws";
@@ -122,7 +122,7 @@ function normalizeBasePath(p: string | undefined): string {
   return withLeading.endsWith("/") ? withLeading.slice(0, -1) : withLeading;
 }
 
-function replyHttpError(socket: Socket, status: number, reason: string) {
+function replyHttpError(socket: Duplex, status: number, reason: string) {
   try {
     socket.write(
       `HTTP/1.1 ${status} ${reason}\r\n` +
@@ -195,7 +195,7 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
     }
   }
 
-  async function handleUpgrade(req: IncomingMessage, socket: Socket, head: Buffer) {
+  async function handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer) {
     const hostHeader = typeof req.headers.host === "string" ? req.headers.host : "localhost";
     const url = new URL(req.url ?? "/", `http://${hostHeader}`);
     const pathname = url.pathname || "/";
