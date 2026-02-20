@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/holiber/jabterm/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/holiber/jabterm/actions/workflows/ci.yml)
 
-**Just Another Browser Terminal** — drop-in React component + Node.js server for embedding real terminals in web apps.
+**Just Another Browser Terminal** — run your real terminal in browser
 
 <p align="center">
   <a href="docs/demo.webm">
@@ -10,11 +10,10 @@
   </a>
 </p>
 
-*Click to open `docs/demo.webm` (higher quality than GIF).*
 
 ## Features
 
-- Single `<JabTerm>` React component — no wrapper overhead, no built-in tabs
+- Single `<JabTerm>` React component
 - Multiple independent terminals on one page without conflicts
 - Node.js server powered by `node-pty` — real shell, real colors
 - Same-origin WebSocket proxy for HTTPS / Cloudflare / tunnel deployments
@@ -70,36 +69,6 @@ pnpm dev:demo
 This starts:
 - the terminal WebSocket server on `ws://127.0.0.1:3223`
 - the demo page on `http://127.0.0.1:3224`
-
-## Multiple Terminals
-
-Each `<JabTerm>` opens its own WebSocket connection and PTY process.
-They are fully independent:
-
-```tsx
-<div style={{ display: "flex", gap: 8, height: 400 }}>
-  <JabTerm wsUrl="ws://localhost:3223" />
-</div>
-```
-
-## Screenshots
-
-| Echo command | vim/vi TUI editor |
-|---|---|
-| ![echo](docs/screenshots/terminal-echo.png)
-
-### Updating demo media assets
-
-The demo assets live in `docs/demo.webm` and `docs/screenshots/*.png`.
-
-To regenerate locally:
-
-```bash
-pnpm install
-pnpm build
-pnpm exec playwright test tests/screenshot.spec.ts
-pnpm exec playwright test tests/video.spec.ts
-```
 
 CI also regenerates these assets on pushes to `main` (so contributors typically don't have to).
 
@@ -186,7 +155,7 @@ httpServer.on("upgrade", (req, socket, head) => {
 
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for internals, data flow diagrams, and protocol description.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for internals
 
 ## License
 
