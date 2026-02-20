@@ -2,7 +2,9 @@
 
 **Just Another Browser Terminal** — drop-in React component + Node.js server for embedding real terminals in web apps.
 
-<video src="docs/demo.webm" controls muted loop playsinline style="max-width: 720px; width: 100%;"></video>
+[![Demo video (click to play)](docs/screenshots/terminal-echo.png)](docs/demo.webm)
+
+*Click the image to open the demo video (`docs/demo.webm`).*
 
 ## Features
 
