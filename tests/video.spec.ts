@@ -24,8 +24,8 @@ function resolveFfmpegPath(): string {
 function generateGifFromWebm(webmPath: string, gifPath: string): void {
   const ffmpeg = resolveFfmpegPath();
   const tmpPalette = path.join(os.tmpdir(), `jabterm_palette_${Date.now()}.png`);
-  const fps = 12;
-  const width = 720;
+  const fps = 10;
+  const width = 640;
   const scale = `scale=${width}:-1:flags=lanczos`;
 
   const paletteGen = spawnSync(ffmpeg, [
@@ -75,8 +75,8 @@ function generateGifFromWebm(webmPath: string, gifPath: string): void {
 test.use({
   video: {
     mode: "on",
-    // 720p keeps the README demo compact while staying readable.
-    size: { width: 1280, height: 720 },
+    // Slightly smaller capture reduces empty space in GIF.
+    size: { width: 1024, height: 576 },
   },
 });
 
@@ -84,7 +84,7 @@ test.describe("Terminal - demo video", () => {
   test("records terminal usage flow", async ({ page }) => {
     test.setTimeout(120_000);
 
-    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.setViewportSize({ width: 1024, height: 576 });
     await page.goto("/");
 
     // Video should show just one terminal (Terminal 1).
@@ -108,15 +108,17 @@ test.describe("Terminal - demo video", () => {
     await page.keyboard.press("Enter");
     await page.waitForTimeout(1200);
 
-    await page.keyboard.type(
-      "rm -f /tmp/jabterm_video_demo.txt && " +
-        "if command -v vim >/dev/null 2>&1; then " +
-        "vim -u NONE -U NONE -i NONE -n +startinsert /tmp/jabterm_video_demo.txt; " +
-        "else vi /tmp/jabterm_video_demo.txt; fi",
-      { delay: 16 },
-    );
+    await page.keyboard.type("rm -f /tmp/jabterm_video_demo.txt", { delay: 18 });
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(700);
+
+    await page.keyboard.type("vi /tmp/jabterm_video_demo.txt", { delay: 18 });
     await page.keyboard.press("Enter");
     await page.waitForTimeout(2000);
+
+    // Enter insert mode in vi/vim.
+    await page.keyboard.type("i", { delay: 10 });
+    await page.waitForTimeout(150);
 
     await page.keyboard.type("JabTerm demo video", { delay: 14 });
     await page.keyboard.press("Enter");
