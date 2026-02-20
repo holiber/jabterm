@@ -3,8 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JabTerm Demo — Two Terminals</title>
+  <title>JabTerm React Demo — Two Terminals</title>
   <link rel="stylesheet" href="/xterm.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@19.2.4",
+        "react-dom/client": "https://esm.sh/react-dom@19.2.4/client",
+        "react/jsx-runtime": "https://esm.sh/react@19.2.4/jsx-runtime",
+        "@xterm/xterm": "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/+esm",
+        "@xterm/addon-fit": "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/+esm"
+      }
+    }
+  </script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -15,13 +26,42 @@
       display: flex;
       flex-direction: column;
     }
+    #app {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
     header {
       padding: 16px 24px;
       font-size: 14px;
       font-weight: 600;
       border-bottom: 1px solid #21262d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
     }
     header span { color: #58a6ff; }
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 500;
+      color: #8b949e;
+    }
+    .controls button {
+      appearance: none;
+      border: 1px solid #30363d;
+      background: #161b22;
+      color: #c9d1d9;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .controls button:hover { border-color: #58a6ff; }
     .terminals {
       flex: 1;
       display: flex;
@@ -47,83 +87,117 @@
       overflow: hidden;
       background: #1e1e1e;
     }
+    .placeholder {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8b949e;
+      font-size: 12px;
+      border: 1px dashed #30363d;
+      margin: 8px;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
-  <header><span>JabTerm</span> — Two Independent Terminals</header>
-  <div class="terminals">
-    <div class="term-pane">
-      <div class="term-label" id="label-1">Terminal 1</div>
-      <div class="term-container" id="term-1" data-testid="jabterm-1"></div>
-    </div>
-    <div class="term-pane">
-      <div class="term-label" id="label-2">Terminal 2</div>
-      <div class="term-container" id="term-2" data-testid="jabterm-2"></div>
-    </div>
-  </div>
+  <div id="app"></div>
 
   <script type="module">
-    import { Terminal } from "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/+esm";
-    import { FitAddon } from "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/+esm";
+    import React from "react";
+    import { createRoot } from "react-dom/client";
+    import { JabTerm } from "/dist/react/index.js";
 
     const WS_PORT = __JABTERM_WS_PORT__;
+    const e = React.createElement;
 
-    function createTerminal(containerId, labelId) {
-      const container = document.getElementById(containerId);
-      const label = document.getElementById(labelId);
-      const term = new Terminal({
-        cursorBlink: true,
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-        fontSize: 13,
-        theme: { background: "#1e1e1e" },
-      });
-      const fitAddon = new FitAddon();
-      term.loadAddon(fitAddon);
-      term.open(container);
-      fitAddon.fit();
+    function TerminalPane({ testId, defaultLabel }) {
+      const [title, setTitle] = React.useState("");
+      const wsUrl = `ws://127.0.0.1:${WS_PORT}`;
 
-      const ws = new WebSocket(`ws://127.0.0.1:${WS_PORT}`);
-      ws.binaryType = "arraybuffer";
-
-      ws.onopen = () => {
-        fitAddon.fit();
-        ws.send(JSON.stringify({ type: "resize", cols: Math.max(term.cols, 80), rows: Math.max(term.rows, 24) }));
-      };
-
-      ws.onmessage = (e) => {
-        if (typeof e.data === "string") term.write(e.data);
-        else term.write(new Uint8Array(e.data));
-      };
-
-      ws.onclose = () => {
-        term.write("\r\n\x1b[31mDisconnected\x1b[0m\r\n");
-      };
-
-      const encoder = new TextEncoder();
-      term.onData((data) => {
-        if (ws.readyState === WebSocket.OPEN) ws.send(encoder.encode(data));
-      });
-
-      term.onTitleChange((title) => {
-        label.textContent = title || containerId.replace("term-", "Terminal ");
-      });
-
-      window.addEventListener("resize", () => {
-        fitAddon.fit();
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
-        }
-      });
-
-      container.addEventListener("mousedown", () => term.focus());
-
-      return { term, ws, fitAddon };
+      return e(
+        "div",
+        { className: "term-pane" },
+        e("div", { className: "term-label" }, title || defaultLabel),
+        e(
+          "div",
+          { className: "term-container", "data-testid": testId },
+          e(JabTerm, { wsUrl, onTitleChange: setTitle }),
+        ),
+      );
     }
 
-    const t1 = createTerminal("term-1", "label-1");
-    const t2 = createTerminal("term-2", "label-2");
+    function App() {
+      const [show1, setShow1] = React.useState(true);
+      const [wideLeft, setWideLeft] = React.useState(false);
 
-    window.__jabterm_instances = [t1, t2];
+      return e(
+        React.Fragment,
+        null,
+        e(
+          "header",
+          null,
+          e("div", null, e("span", null, "JabTerm"), " — React Demo (2 terminals)"),
+          e(
+            "div",
+            { className: "controls" },
+            e(
+              "button",
+              {
+                type: "button",
+                "data-testid": "toggle-term-1",
+                onClick: () => setShow1((v) => !v),
+              },
+              show1 ? "Unmount T1" : "Mount T1",
+            ),
+            e(
+              "button",
+              {
+                type: "button",
+                "data-testid": "toggle-layout",
+                onClick: () => setWideLeft((v) => !v),
+              },
+              wideLeft ? "Even split" : "Widen left",
+            ),
+          ),
+        ),
+        e(
+          "div",
+          { className: "terminals" },
+          e(
+            "div",
+            {
+              className: "term-pane",
+              style: wideLeft ? { flex: 2 } : undefined,
+            },
+            e("div", { className: "term-label" }, "Terminal 1"),
+            e(
+              "div",
+              { className: "term-container", "data-testid": "jabterm-1" },
+              show1
+                ? e(JabTerm, { wsUrl: `ws://127.0.0.1:${WS_PORT}` })
+                : e(
+                    "div",
+                    { className: "placeholder", "data-testid": "unmounted-1" },
+                    "Terminal 1 unmounted",
+                  ),
+            ),
+          ),
+          e(
+            "div",
+            { className: "term-pane" },
+            e("div", { className: "term-label" }, "Terminal 2"),
+            e(
+              "div",
+              { className: "term-container", "data-testid": "jabterm-2" },
+              e(JabTerm, { wsUrl: `ws://127.0.0.1:${WS_PORT}` }),
+            ),
+          ),
+        ),
+      );
+    }
+
+    createRoot(document.getElementById("app")).render(e(App));
   </script>
 </body>
 </html>
