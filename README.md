@@ -50,6 +50,17 @@ function App() {
 }
 ```
 
+## Local development
+
+```bash
+pnpm install
+pnpm dev:demo
+```
+
+This starts:
+- the terminal WebSocket server on `ws://127.0.0.1:3223`
+- the demo page on `http://127.0.0.1:3224`
+
 ## Multiple Terminals
 
 Each `<JabTerm>` opens its own WebSocket connection and PTY process.
@@ -68,7 +79,20 @@ They are fully independent:
 |---|---|
 | ![echo](docs/screenshots/terminal-echo.png) | ![nano](docs/screenshots/terminal-tui.png) |
 
-*Video + screenshots are auto-updated by CI on every push to `main`.*
+### Updating demo media assets
+
+The demo assets live in `docs/demo.webm` and `docs/screenshots/*.png`.
+
+To regenerate locally:
+
+```bash
+pnpm install
+pnpm build
+pnpm exec playwright test tests/screenshot.spec.ts
+pnpm exec playwright test tests/video.spec.ts
+```
+
+CI also regenerates these assets on pushes to `main` (so contributors typically don't have to).
 
 ## API Reference
 
@@ -96,6 +120,12 @@ const server = await createTerminalServer({
 ```
 
 Returns `{ wss, port, close() }`.
+
+## Security notes
+
+`jabterm/server` spawns real shell processes. For production deployments:
+- Keep it bound to loopback (`127.0.0.1`) and expose only behind an authenticated app/reverse-proxy.
+- Consider adding origin checks and/or a token handshake for WebSocket connections.
 
 ### `createTerminalProxy(options)`
 
