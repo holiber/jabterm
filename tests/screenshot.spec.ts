@@ -3,7 +3,7 @@
  *
  * Opens demo-page.html with two JabTerm instances:
  *   1. Runs `echo "Hello from JabTerm"` -> captures terminal-echo.png
- *   2. Opens nano with a syntax-highlighted file -> captures terminal-tui.png
+ *   2. Opens a TUI editor (vim/vi) with a script file -> captures terminal-tui.png
  */
 
 import { test, expect } from "@playwright/test";
@@ -41,7 +41,7 @@ test.describe("Terminal — README screenshots", () => {
     });
   });
 
-  test("capture nano TUI screenshot", async ({ page }) => {
+  test("capture vim/vi TUI screenshot", async ({ page }) => {
     await page.goto("/");
 
     const term2 = page.locator('[data-testid="jabterm-2"] .xterm-screen');
@@ -50,15 +50,15 @@ test.describe("Terminal — README screenshots", () => {
     // Wait for shell prompt
     await page.waitForTimeout(2000);
 
-    // Create a sample file with some content, then open nano
+    // Create a sample file with some content, then open a TUI editor
     await term2.click();
     await page.keyboard.type(
-      'printf "#!/bin/bash\\n\\n# JabTerm Demo Script\\necho \\"Hello World\\"\\n\\nfor i in 1 2 3; do\\n  echo \\"Count: $i\\"\\ndone\\n" > /tmp/jabterm_demo.sh && nano --syntax=sh /tmp/jabterm_demo.sh',
+      'printf "#!/bin/bash\\n\\n# JabTerm Demo Script\\necho \\"Hello World\\"\\n\\nfor i in 1 2 3; do\\n  echo \\"Count: $i\\"\\ndone\\n" > /tmp/jabterm_demo.sh && if command -v vim >/dev/null 2>&1; then vim -u NONE -i NONE -n /tmp/jabterm_demo.sh; else vi /tmp/jabterm_demo.sh; fi',
       { delay: 10 },
     );
     await page.keyboard.press("Enter");
 
-    // Wait for nano to fully render
+    // Wait for the editor to fully render
     await page.waitForTimeout(3000);
 
     const pane2 = page.locator('[data-testid="jabterm-2"]');
@@ -66,8 +66,11 @@ test.describe("Terminal — README screenshots", () => {
       path: path.join(SCREENSHOTS_DIR, "terminal-tui.png"),
     });
 
-    // Exit nano cleanly
-    await page.keyboard.press("Control+X");
+    // Exit the editor cleanly
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+    await page.keyboard.type(":q!", { delay: 20 });
+    await page.keyboard.press("Enter");
     await page.waitForTimeout(500);
   });
 

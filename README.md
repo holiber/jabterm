@@ -75,9 +75,9 @@ They are fully independent:
 
 ## Screenshots
 
-| Echo command | nano TUI editor |
+| Echo command | vim/vi TUI editor |
 |---|---|
-| ![echo](docs/screenshots/terminal-echo.png) | ![nano](docs/screenshots/terminal-tui.png) |
+| ![echo](docs/screenshots/terminal-echo.png) | ![editor](docs/screenshots/terminal-tui.png) |
 
 ### Updating demo media assets
 

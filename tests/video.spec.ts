@@ -30,19 +30,31 @@ test.describe("Terminal - demo video", () => {
     await page.keyboard.press("Enter");
     await page.waitForTimeout(1200);
 
-    await page.keyboard.type("nano /tmp/jabterm_video_demo.txt", { delay: 22 });
+    await page.keyboard.type("ls", { delay: 26 });
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(1200);
+
+    await page.keyboard.type(
+      "rm -f /tmp/jabterm_video_demo.txt && " +
+        "if command -v vim >/dev/null 2>&1; then " +
+        "vim -u NONE -i NONE -n /tmp/jabterm_video_demo.txt; " +
+        "else vi /tmp/jabterm_video_demo.txt; fi",
+      { delay: 16 },
+    );
     await page.keyboard.press("Enter");
     await page.waitForTimeout(1400);
 
-    await page.keyboard.type("JabTerm demo video", { delay: 16 });
-    await page.keyboard.press("Enter");
-    await page.keyboard.type("This text is written inside nano.", { delay: 16 });
-    await page.waitForTimeout(500);
-    await page.keyboard.press("Control+O");
-    await page.waitForTimeout(500);
+    await page.keyboard.type("JabTerm demo video", { delay: 14 });
     await page.keyboard.press("Enter");
     await page.waitForTimeout(500);
-    await page.keyboard.press("Control+X");
+    await page.keyboard.type("This text is written inside a TUI editor.", {
+      delay: 14,
+    });
+    await page.waitForTimeout(600);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(250);
+    await page.keyboard.type(":wq", { delay: 24 });
+    await page.keyboard.press("Enter");
     await page.waitForTimeout(1000);
 
     if (isMcInstalled()) {
