@@ -1,20 +1,58 @@
 {
   "name": "jabterm",
   "version": "0.1.0",
-  "private": true,
-  "description": "JabTerm — Just Another Browser Terminal. Drop-in React component + Node.js server.",
+  "description": "JabTerm - Just Another Browser Terminal. Drop-in React component + Node.js server.",
+  "type": "module",
+  "exports": {
+    "./server": {
+      "import": "./dist/server/index.js",
+      "types": "./dist/server/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/react/index.js",
+      "types": "./dist/react/index.d.ts"
+    }
+  },
+  "bin": {
+    "jabterm-server": "./bin/jabterm-server.mjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "tsc -p tsconfig.server.json && tsc -p tsconfig.react.json",
+    "prepack": "pnpm build",
     "test": "pnpm exec playwright test",
-    "dev:server": "node packages/server/bin/jabterm-server.mjs"
+    "dev:server": "node bin/jabterm-server.mjs"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.1.0",
+    "ws": "^8.19.0"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
     "@types/node": "^22",
+    "@types/react": "^19.2.14",
+    "@types/ws": "^8.18.1",
     "typescript": "^5"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["node-pty"]
+    "onlyBuiltDependencies": [
+      "node-pty"
+    ]
   },
   "packageManager": "pnpm@10.12.1",
   "license": "MIT"

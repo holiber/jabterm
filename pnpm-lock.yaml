@@ -7,18 +7,6 @@ settings:
 importers:
 
   .:
-    devDependencies:
-      '@playwright/test':
-        specifier: ^1.58.1
-        version: 1.58.2
-      '@types/node':
-        specifier: ^22
-        version: 22.19.11
-      typescript:
-        specifier: ^5
-        version: 5.9.3
-
-  packages/react:
     dependencies:
       '@xterm/addon-fit':
         specifier: ^0.11.0
@@ -26,26 +14,31 @@ importers:
       '@xterm/xterm':
         specifier: ^6.0.0
         version: 6.0.0
-      react:
-        specifier: '>=18'
-        version: 19.2.4
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-
-  packages/server:
-    dependencies:
       node-pty:
         specifier: ^1.1.0
         version: 1.1.0
+      react:
+        specifier: '>=18'
+        version: 19.2.4
       ws:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.58.1
+        version: 1.58.2
+      '@types/node':
+        specifier: ^22
+        version: 22.19.11
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
 packages:
 

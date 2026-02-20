@@ -24,26 +24,33 @@ jobs:
 
       - run: pnpm build
 
+      - name: Install terminal demo dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mc nano
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run tests
         run: pnpm test
 
-      - name: Upload screenshots as artifact
+      - name: Upload docs artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: terminal-screenshots
-          path: docs/screenshots/*.png
+          name: jabterm-docs-assets
+          path: |
+            docs/screenshots/*.png
+            docs/demo.webm
           if-no-files-found: ignore
 
-      - name: Commit updated screenshots
+      - name: Commit updated docs assets
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          file_pattern: "docs/screenshots/*.png"
-          commit_message: "ci: update terminal screenshots"
+          file_pattern: "docs/screenshots/*.png docs/demo.webm"
+          commit_message: "ci: update terminal docs assets"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
 

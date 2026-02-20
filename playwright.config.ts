@@ -17,7 +17,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `node packages/server/bin/jabterm-server.mjs --port ${PORT}`,
+      command: `node bin/jabterm-server.mjs --port ${PORT}`,
       port: PORT,
       reuseExistingServer: !process.env.CI,
       timeout: 15_000,

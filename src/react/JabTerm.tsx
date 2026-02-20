@@ -18,8 +18,6 @@ export default function JabTerm({
 }: JabTermProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
   const closingByCleanupRef = useRef(false);
   const disposedRef = useRef(false);
 
@@ -45,11 +43,9 @@ export default function JabTerm({
     fitAddon.fit();
 
     xtermRef.current = term;
-    fitAddonRef.current = fitAddon;
 
     const ws = new WebSocket(wsUrl);
     ws.binaryType = "arraybuffer";
-    wsRef.current = ws;
 
     ws.onopen = () => {
       if (disposedRef.current) return;
@@ -125,7 +121,12 @@ export default function JabTerm({
       ref={terminalRef}
       data-testid="jabterm-container"
       className={className}
-      style={{ width: "100%", height: "100%", overflow: "hidden", background: theme?.background ?? "#1e1e1e" }}
+      style={{
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        background: theme?.background ?? "#1e1e1e",
+      }}
       onMouseDown={() => {
         try {
           xtermRef.current?.focus();

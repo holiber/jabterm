@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * CLI entrypoint for @jabterm/server.
+ * CLI entrypoint for jabterm/server.
  *
  * Usage:
- *   npx @jabterm/server
- *   npx @jabterm/server --port 3223
- *   npx @jabterm/server --port 3223 --shell /bin/bash --cwd /tmp --strict-port
+ *   npx jabterm-server
+ *   npx jabterm-server --port 3223
+ *   npx jabterm-server --port 3223 --shell /bin/bash --cwd /tmp --strict-port
  */
 
-import { createTerminalServer } from "../dist/index.js";
+import { createTerminalServer } from "../dist/server/index.js";
 
 function parseArgs(argv) {
   const args = {};
@@ -35,7 +35,7 @@ function parseArgs(argv) {
       args.strictPort = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
-  jabterm-server — JabTerm WebSocket terminal server
+  jabterm-server - JabTerm WebSocket terminal server
 
   Usage:
     jabterm-server [options]

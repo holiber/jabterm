@@ -2,10 +2,10 @@
 
 ## Overview
 
-JabTerm consists of two packages:
+JabTerm is published as a single package with two subpath entry points:
 
-- **`@jabterm/server`** — Node.js WebSocket server that spawns PTY processes via `node-pty`
-- **`@jabterm/react`** — React component that renders xterm.js and connects to the server
+- **`jabterm/server`** — Node.js WebSocket server that spawns PTY processes via `node-pty`
+- **`jabterm/react`** — React component that renders xterm.js and connects to the server
 
 ## Data Flow — Direct Mode
 

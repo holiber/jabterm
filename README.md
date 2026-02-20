@@ -2,7 +2,7 @@
 
 **Just Another Browser Terminal** — drop-in React component + Node.js server for embedding real terminals in web apps.
 
-![Two terminals running side by side](docs/screenshots/demo-dual-terminals.png)
+<video src="docs/demo.webm" controls muted loop playsinline></video>
 
 ## Features
 
@@ -10,26 +10,26 @@
 - Multiple independent terminals on one page without conflicts
 - Node.js server powered by `node-pty` — real shell, real colors
 - Same-origin WebSocket proxy for HTTPS / Cloudflare / tunnel deployments
-- CLI binary: `npx @jabterm/server --port 3223`
+- CLI binary: `npx jabterm-server --port 3223`
 
 ## Quick Start
 
 ### 1. Install
 
 ```bash
-pnpm add @jabterm/server @jabterm/react
+pnpm add jabterm @xterm/xterm
 ```
 
 ### 2. Start the server
 
 ```bash
-npx @jabterm/server --port 3223
+npx jabterm-server --port 3223
 ```
 
 Or programmatically:
 
 ```typescript
-import { createTerminalServer } from "@jabterm/server";
+import { createTerminalServer } from "jabterm/server";
 
 const server = await createTerminalServer({ port: 3223 });
 // server.close() to shut down
@@ -38,8 +38,8 @@ const server = await createTerminalServer({ port: 3223 });
 ### 3. Render the component
 
 ```tsx
-import { JabTerm } from "@jabterm/react";
-import "@jabterm/react/xterm.css";
+import { JabTerm } from "jabterm/react";
+import "@xterm/xterm/css/xterm.css";
 
 function App() {
   return (
@@ -68,7 +68,7 @@ They are fully independent:
 |---|---|
 | ![echo](docs/screenshots/terminal-echo.png) | ![nano](docs/screenshots/terminal-tui.png) |
 
-*Screenshots are auto-updated by CI on every push to `main`.*
+*Video + screenshots are auto-updated by CI on every push to `main`.*
 
 ## API Reference
 
@@ -102,7 +102,7 @@ Returns `{ wss, port, close() }`.
 Creates a `WebSocketServer` in `noServer` mode for same-origin proxying:
 
 ```typescript
-import { createTerminalProxy } from "@jabterm/server";
+import { createTerminalProxy } from "jabterm/server";
 
 const proxyWss = createTerminalProxy({
   upstreamUrl: "ws://127.0.0.1:3223",
