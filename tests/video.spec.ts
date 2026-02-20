@@ -7,8 +7,8 @@ const OUTPUT_VIDEO = path.resolve("docs/demo.webm");
 test.use({
   video: {
     mode: "on",
-    // Larger video frame improves readability and avoids blur.
-    size: { width: 1920, height: 1080 },
+    // 720p keeps the README demo compact while staying readable.
+    size: { width: 1280, height: 720 },
   },
 });
 
@@ -16,7 +16,7 @@ test.describe("Terminal - demo video", () => {
   test("records terminal usage flow", async ({ page }) => {
     test.setTimeout(120_000);
 
-    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto("/");
 
     // Video should show just one terminal (Terminal 1).
@@ -63,9 +63,16 @@ test.describe("Terminal - demo video", () => {
     await page.keyboard.press("Enter");
     await page.waitForTimeout(1000);
 
-    await page.keyboard.type("cat /tmp/jabterm_video_demo.txt", { delay: 18 });
+    await page.keyboard.type("clear", { delay: 20 });
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(1400);
+    await page.waitForTimeout(700);
+
+    await page.keyboard.type(
+      "printf '--- /tmp/jabterm_video_demo.txt ---\\n' && cat /tmp/jabterm_video_demo.txt && printf '\\n------------------------------\\n'",
+      { delay: 10 },
+    );
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(3000);
 
     const video = page.video();
     expect(video).not.toBeNull();
