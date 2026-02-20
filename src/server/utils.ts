@@ -5,6 +5,53 @@ import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
 
+function isExecutableFile(p: string): boolean {
+  try {
+    if (!p) return false;
+    fs.accessSync(p, fs.constants.X_OK);
+    const st = fs.statSync(p);
+    return st.isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolve a reasonable default shell for node-pty on the current OS.
+ *
+ * Order:
+ * - explicit user-provided `shell` if set
+ * - `process.env.SHELL` if it exists and is executable
+ * - OS-specific common absolute paths (Linux prefers bash/sh; macOS prefers zsh)
+ * - finally fall back to PATH lookup (`bash` then `sh`)
+ */
+export function resolveDefaultShell(explicitShell?: string): string {
+  if (explicitShell) return explicitShell;
+
+  if (process.platform === "win32") return "powershell.exe";
+
+  const envShell = process.env.SHELL;
+  if (envShell && isExecutableFile(envShell)) return envShell;
+
+  const candidates =
+    process.platform === "darwin"
+      ? ["/bin/zsh", "/usr/bin/zsh", "/bin/bash", "/usr/bin/bash", "/bin/sh"]
+      : [
+          "/bin/bash",
+          "/usr/bin/bash",
+          "/bin/sh",
+          "/usr/bin/sh",
+          "/bin/zsh",
+          "/usr/bin/zsh",
+        ];
+
+  for (const c of candidates) {
+    if (isExecutableFile(c)) return c;
+  }
+
+  return "bash";
+}
+
 export function assertPortFree(port: number): Promise<void> {
   return new Promise((resolve, reject) => {
     const probe = net.createServer();

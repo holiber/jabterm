@@ -4,13 +4,14 @@ import os from "os";
 import {
   assertPortFree,
   ensureNodePtySpawnHelperExecutable,
+  resolveDefaultShell,
   safeLocale,
 } from "./utils.js";
 
 export interface TerminalServerOptions {
   /** Port to listen on. Default: 3223 */
   port?: number;
-  /** Shell to spawn. Default: /bin/zsh (macOS/Linux) or powershell.exe (Windows) */
+  /** Shell to spawn. Default: $SHELL when available; otherwise bash/sh on Linux and zsh/bash/sh on macOS (powershell.exe on Windows). */
   shell?: string;
   /** Working directory for new terminals. Default: $HOME or cwd */
   cwd?: string;
@@ -31,9 +32,7 @@ export async function createTerminalServer(
 ): Promise<TerminalServer> {
   const port = opts?.port ?? 3223;
   const host = opts?.host ?? "127.0.0.1";
-  const shell =
-    opts?.shell ??
-    (os.platform() === "win32" ? "powershell.exe" : "/bin/zsh");
+  const shell = resolveDefaultShell(opts?.shell);
   const cwd = opts?.cwd ?? process.env.HOME ?? process.cwd();
   const strictPort = opts?.strictPort ?? false;
 

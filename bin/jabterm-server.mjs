@@ -43,7 +43,7 @@ function parseArgs(argv) {
   Options:
     --port <number>     Port to listen on (default: 3223, or JABTERM_PORT env)
     --host <string>     Host to bind to (default: 127.0.0.1)
-    --shell <path>      Shell to spawn (default: /bin/zsh or powershell.exe)
+    --shell <path>      Shell to spawn (default: uses $SHELL when available; otherwise bash/sh on Linux and zsh/bash/sh on macOS; powershell.exe on Windows)
     --cwd <path>        Working directory for new terminals (default: $HOME)
     --strict-port       Fail if port is already in use
     -h, --help          Show this help

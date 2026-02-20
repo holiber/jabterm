@@ -15,10 +15,10 @@ In development or local HTTP setups, the browser connects directly to the termin
 sequenceDiagram
     participant Browser
     participant JabTermServer as JabTerm Server<br/>(node-pty + ws)
-    participant Shell as Shell Process<br/>(/bin/zsh)
+    participant Shell as Shell Process<br/>($SHELL / bash / zsh)
 
     Browser->>JabTermServer: WebSocket connect ws://host:3223
-    JabTermServer->>Shell: pty.spawn("/bin/zsh")
+    JabTermServer->>Shell: pty.spawn(resolveDefaultShell())
     Note over JabTermServer,Shell: PTY allocated (cols=80, rows=24)
 
     Browser->>JabTermServer: Binary frame (keystrokes)
