@@ -1,0 +1,150 @@
+import { WebSocketServer, WebSocket } from "ws";
+import * as pty from "node-pty";
+import os from "os";
+import {
+  assertPortFree,
+  ensureNodePtySpawnHelperExecutable,
+  safeLocale,
+} from "./utils.js";
+
+export interface TerminalServerOptions {
+  /** Port to listen on. Default: 3223 */
+  port?: number;
+  /** Shell to spawn. Default: /bin/zsh (macOS/Linux) or powershell.exe (Windows) */
+  shell?: string;
+  /** Working directory for new terminals. Default: $HOME or cwd */
+  cwd?: string;
+  /** If true, fail immediately when port is busy instead of silently skipping. */
+  strictPort?: boolean;
+  /** Host to bind to. Default: 127.0.0.1 */
+  host?: string;
+}
+
+export interface TerminalServer {
+  wss: WebSocketServer;
+  port: number;
+  close(): Promise<void>;
+}
+
+export async function createTerminalServer(
+  opts?: TerminalServerOptions,
+): Promise<TerminalServer> {
+  const port = opts?.port ?? 3223;
+  const host = opts?.host ?? "127.0.0.1";
+  const shell =
+    opts?.shell ??
+    (os.platform() === "win32" ? "powershell.exe" : "/bin/zsh");
+  const cwd = opts?.cwd ?? process.env.HOME ?? process.cwd();
+  const strictPort = opts?.strictPort ?? false;
+
+  ensureNodePtySpawnHelperExecutable();
+
+  if (strictPort) {
+    await assertPortFree(port);
+  }
+
+  const wss = new WebSocketServer({ port, host });
+  const ptys = new Set<pty.IPty>();
+
+  let shuttingDown = false;
+
+  wss.on("connection", (ws: WebSocket) => {
+    console.log("[jabterm] Client connected");
+
+    const env = {
+      ...process.env,
+      TERM: "xterm-256color",
+      COLORTERM: "truecolor",
+      LANG: safeLocale(),
+    };
+
+    try {
+      const ptyProcess = pty.spawn(shell, [], {
+        name: "xterm-256color",
+        cols: 80,
+        rows: 24,
+        cwd,
+        env,
+      });
+      ptys.add(ptyProcess);
+
+      ptyProcess.onData((data: string) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(data);
+        }
+      });
+
+      ws.on("message", (message: Buffer | string) => {
+        let handled = false;
+
+        try {
+          const msgStr = message.toString();
+          if (msgStr.startsWith("{")) {
+            const control = JSON.parse(msgStr);
+            if (control.type === "resize") {
+              const cols = Math.max(control.cols || 80, 10);
+              const rows = Math.max(control.rows || 24, 10);
+              try {
+                ptyProcess.resize(cols, rows);
+              } catch (resizeErr) {
+                console.error("[jabterm] Resize failed:", resizeErr);
+              }
+              handled = true;
+            }
+          }
+        } catch {
+          // Not a valid control message, treat as input
+        }
+
+        if (!handled) {
+          try {
+            ptyProcess.write(message.toString("utf-8"));
+          } catch (err) {
+            console.error("[jabterm] Error writing to PTY:", err);
+          }
+        }
+      });
+
+      ws.on("close", () => {
+        console.log("[jabterm] Client disconnected");
+        try {
+          ptyProcess.kill();
+        } catch {
+          /* ignore */
+        }
+      });
+
+      ptyProcess.onExit(({ exitCode, signal }) => {
+        console.log(
+          `[jabterm] Process exited (code: ${exitCode}, signal: ${signal})`,
+        );
+        ptys.delete(ptyProcess);
+        ws.close();
+      });
+    } catch (err) {
+      console.error("[jabterm] Failed to spawn pty:", err);
+      ws.close();
+    }
+  });
+
+  console.log(`[jabterm] Terminal server listening on ${host}:${port}`);
+
+  async function close(): Promise<void> {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log("[jabterm] Shutting down");
+    for (const p of ptys) {
+      try {
+        p.kill();
+      } catch {
+        /* ignore */
+      }
+    }
+    return new Promise<void>((resolve) => {
+      wss.close(() => resolve());
+      setTimeout(() => resolve(), 2000).unref?.();
+    });
+  }
+
+  return { wss, port, close };
+}

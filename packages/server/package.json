@@ -1,0 +1,30 @@
+{
+  "name": "@jabterm/server",
+  "version": "0.1.0",
+  "description": "Node.js WebSocket terminal server powered by node-pty",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "jabterm-server": "./bin/jabterm-server.mjs"
+  },
+  "files": ["dist", "bin"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "node bin/jabterm-server.mjs"
+  },
+  "dependencies": {
+    "node-pty": "^1.1.0",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.cache/
+*.tsbuildinfo
+.env
+.env.local
+
+# Playwright
+test-results/
+playwright-report/
+
+# OS
+.DS_Store
+Thumbs.db
