@@ -32,36 +32,6 @@
       display: flex;
       flex-direction: column;
     }
-    header {
-      padding: 16px 24px;
-      font-size: 14px;
-      font-weight: 600;
-      border-bottom: 1px solid #21262d;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    header span { color: #58a6ff; }
-    .controls {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      font-size: 12px;
-      font-weight: 500;
-      color: #8b949e;
-    }
-    .controls button {
-      appearance: none;
-      border: 1px solid #30363d;
-      background: #161b22;
-      color: #c9d1d9;
-      border-radius: 6px;
-      padding: 6px 10px;
-      cursor: pointer;
-      font: inherit;
-    }
-    .controls button:hover { border-color: #58a6ff; }
     .terminals {
       flex: 1;
       display: flex;
@@ -136,36 +106,20 @@
       const [show1, setShow1] = React.useState(true);
       const [wideLeft, setWideLeft] = React.useState(false);
 
+      React.useEffect(() => {
+        // Expose minimal controls for Playwright smoke tests without rendering UI chrome.
+        window.__jabtermDemo = {
+          toggleTerm1: () => setShow1((v) => !v),
+          toggleLayout: () => setWideLeft((v) => !v),
+        };
+        return () => {
+          delete window.__jabtermDemo;
+        };
+      }, []);
+
       return e(
         React.Fragment,
         null,
-        e(
-          "header",
-          null,
-          e("div", null, e("span", null, "JabTerm"), " — React Demo (2 terminals)"),
-          e(
-            "div",
-            { className: "controls" },
-            e(
-              "button",
-              {
-                type: "button",
-                "data-testid": "toggle-term-1",
-                onClick: () => setShow1((v) => !v),
-              },
-              show1 ? "Unmount T1" : "Mount T1",
-            ),
-            e(
-              "button",
-              {
-                type: "button",
-                "data-testid": "toggle-layout",
-                onClick: () => setWideLeft((v) => !v),
-              },
-              wideLeft ? "Even split" : "Widen left",
-            ),
-          ),
-        ),
         e(
           "div",
           { className: "terminals" },
