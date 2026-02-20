@@ -110,6 +110,11 @@
 
     const WS_PORT = __JABTERM_WS_PORT__;
     const e = React.createElement;
+    const TERM_PROPS = {
+      fontSize: 16,
+      fontFamily:
+        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    };
 
     function TerminalPane({ testId, defaultLabel }) {
       const [title, setTitle] = React.useState("");
@@ -122,7 +127,7 @@
         e(
           "div",
           { className: "term-container", "data-testid": testId },
-          e(JabTerm, { wsUrl, onTitleChange: setTitle }),
+          e(JabTerm, { wsUrl, onTitleChange: setTitle, ...TERM_PROPS }),
         ),
       );
     }
@@ -175,7 +180,7 @@
               "div",
               { className: "term-container", "data-testid": "jabterm-1" },
               show1
-                ? e(JabTerm, { wsUrl: `ws://127.0.0.1:${WS_PORT}` })
+                ? e(JabTerm, { wsUrl: `ws://127.0.0.1:${WS_PORT}`, ...TERM_PROPS })
                 : e(
                     "div",
                     { className: "placeholder", "data-testid": "unmounted-1" },
@@ -190,7 +195,7 @@
             e(
               "div",
               { className: "term-container", "data-testid": "jabterm-2" },
-              e(JabTerm, { wsUrl: `ws://127.0.0.1:${WS_PORT}` }),
+              e(JabTerm, { wsUrl: `ws://127.0.0.1:${WS_PORT}`, ...TERM_PROPS }),
             ),
           ),
         ),
