@@ -2,7 +2,7 @@
 
 **Just Another Browser Terminal** — drop-in React component + Node.js server for embedding real terminals in web apps.
 
-<video src="docs/demo.webm" controls muted loop playsinline></video>
+<video src="docs/demo.webm" controls muted loop playsinline style="max-width: 720px; width: 100%;"></video>
 
 ## Features
 
@@ -77,9 +77,9 @@ They are fully independent:
 
 ## Screenshots
 
-| Echo command | nano TUI editor |
+| Echo command | vim/vi TUI editor |
 |---|---|
-| ![echo](docs/screenshots/terminal-echo.png) | ![nano](docs/screenshots/terminal-tui.png) |
+| ![echo](docs/screenshots/terminal-echo.png) | ![editor](docs/screenshots/terminal-tui.png) |
 
 ### Updating demo media assets
 

@@ -27,7 +27,7 @@ jobs:
       - name: Install terminal demo dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mc nano
+          sudo apt-get install -y mc vim-tiny
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium

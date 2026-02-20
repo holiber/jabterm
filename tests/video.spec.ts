@@ -1,24 +1,30 @@
 import { test, expect } from "@playwright/test";
 import fs from "fs";
 import path from "path";
-import { spawnSync } from "child_process";
 
 const OUTPUT_VIDEO = path.resolve("docs/demo.webm");
 
-function isMcInstalled(): boolean {
-  if (process.platform === "win32") return false;
-  const result = spawnSync("bash", ["-lc", "command -v mc >/dev/null 2>&1"]);
-  return result.status === 0;
-}
-
-test.use({ video: "on" });
+test.use({
+  video: {
+    mode: "on",
+    // 720p keeps the README demo compact while staying readable.
+    size: { width: 1280, height: 720 },
+  },
+});
 
 test.describe("Terminal - demo video", () => {
   test("records terminal usage flow", async ({ page }) => {
     test.setTimeout(120_000);
 
-    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto("/");
+
+    // Video should show just one terminal (Terminal 1).
+    await page.evaluate(() => {
+      const t2 = document.querySelector('[data-testid="jabterm-2"]');
+      const pane = t2?.closest(".term-pane");
+      pane?.remove();
+    });
 
     const term = page.locator('[data-testid="jabterm-1"] .xterm-screen');
     await expect(term).toBeVisible({ timeout: 15_000 });
@@ -30,43 +36,46 @@ test.describe("Terminal - demo video", () => {
     await page.keyboard.press("Enter");
     await page.waitForTimeout(1200);
 
-    await page.keyboard.type("nano /tmp/jabterm_video_demo.txt", { delay: 22 });
+    await page.keyboard.type("ls", { delay: 26 });
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(1400);
+    await page.waitForTimeout(1200);
 
-    await page.keyboard.type("JabTerm demo video", { delay: 16 });
+    await page.keyboard.type(
+      "rm -f /tmp/jabterm_video_demo.txt && " +
+        "if command -v vim >/dev/null 2>&1; then " +
+        "vim -u NONE -U NONE -i NONE -n +startinsert /tmp/jabterm_video_demo.txt; " +
+        "else vi /tmp/jabterm_video_demo.txt; fi",
+      { delay: 16 },
+    );
     await page.keyboard.press("Enter");
-    await page.keyboard.type("This text is written inside nano.", { delay: 16 });
-    await page.waitForTimeout(500);
-    await page.keyboard.press("Control+O");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(2000);
+
+    await page.keyboard.type("JabTerm demo video", { delay: 14 });
     await page.keyboard.press("Enter");
     await page.waitForTimeout(500);
-    await page.keyboard.press("Control+X");
+    await page.keyboard.type("This text is written inside a TUI editor.", {
+      delay: 14,
+    });
+    await page.waitForTimeout(600);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(250);
+    await page.keyboard.type(":wq", { delay: 24 });
+    await page.keyboard.press("Enter");
     await page.waitForTimeout(1000);
 
-    if (isMcInstalled()) {
-      await page.keyboard.type("mc", { delay: 25 });
-      await page.keyboard.press("Enter");
-      await page.waitForTimeout(2200);
+    await page.keyboard.type("clear", { delay: 20 });
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(700);
 
-      await page.keyboard.press("ArrowDown");
-      await page.waitForTimeout(300);
-      await page.keyboard.press("ArrowDown");
-      await page.waitForTimeout(300);
-      await page.keyboard.press("Enter");
-      await page.waitForTimeout(1200);
-      await page.keyboard.press("ArrowDown");
-      await page.waitForTimeout(300);
-      await page.keyboard.press("ArrowUp");
-      await page.waitForTimeout(300);
-      await page.keyboard.press("F10");
-      await page.waitForTimeout(1000);
-    } else {
-      await page.keyboard.type("echo 'mc is not installed on this machine'", { delay: 25 });
-      await page.keyboard.press("Enter");
-      await page.waitForTimeout(1000);
-    }
+    await page.keyboard.type("cat /tmp/jabterm_video_demo.txt", { delay: 18 });
+    await page.keyboard.press("Enter");
+
+    const rows = page.locator('[data-testid="jabterm-1"] .xterm-rows');
+    await expect(rows).toContainText("JabTerm demo video", { timeout: 10_000 });
+    await expect(rows).toContainText("This text is written inside a TUI editor.", {
+      timeout: 10_000,
+    });
+    await page.waitForTimeout(1200);
 
     const video = page.video();
     expect(video).not.toBeNull();

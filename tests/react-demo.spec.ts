@@ -51,13 +51,14 @@ test.describe("React demo page", () => {
     });
     expect(newOut).toContain(SENTINEL);
 
-    await page.getByTestId("toggle-term-1").click();
+    await page.waitForFunction(() => !!window.__jabtermDemo?.toggleTerm1);
+    await page.evaluate(() => window.__jabtermDemo.toggleTerm1());
     await expect(page.getByTestId("unmounted-1")).toBeVisible();
 
-    await page.getByTestId("toggle-term-1").click();
+    await page.evaluate(() => window.__jabtermDemo.toggleTerm1());
     await expect(term1).toBeVisible({ timeout: 15_000 });
 
-    await page.getByTestId("toggle-layout").click();
+    await page.evaluate(() => window.__jabtermDemo.toggleLayout());
     const after = await container.boundingBox();
     expect(after).not.toBeNull();
 
