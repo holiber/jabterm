@@ -1,0 +1,346 @@
+{
+  "total": {
+    "lines": {
+      "total": 881,
+      "covered": 826,
+      "skipped": 0,
+      "pct": 93.75
+    },
+    "statements": {
+      "total": 881,
+      "covered": 826,
+      "skipped": 0,
+      "pct": 93.75
+    },
+    "functions": {
+      "total": 25,
+      "covered": 21,
+      "skipped": 0,
+      "pct": 84
+    },
+    "branches": {
+      "total": 92,
+      "covered": 74,
+      "skipped": 0,
+      "pct": 80.43
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "./src/server/index.ts": {
+    "lines": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "./src/server/jabtermServer.ts": {
+    "lines": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "./src/server/proxy.ts": {
+    "lines": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "./src/server/server.ts": {
+    "lines": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "./src/server/utils.ts": {
+    "lines": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "./tests/echo.spec.ts": {
+    "lines": {
+      "total": 61,
+      "covered": 55,
+      "skipped": 0,
+      "pct": 90.16
+    },
+    "functions": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 61,
+      "covered": 55,
+      "skipped": 0,
+      "pct": 90.16
+    },
+    "branches": {
+      "total": 7,
+      "covered": 6,
+      "skipped": 0,
+      "pct": 85.71
+    }
+  },
+  "./tests/helpers/ws.ts": {
+    "lines": {
+      "total": 77,
+      "covered": 76,
+      "skipped": 0,
+      "pct": 98.7
+    },
+    "functions": {
+      "total": 9,
+      "covered": 7,
+      "skipped": 0,
+      "pct": 77.77
+    },
+    "statements": {
+      "total": 77,
+      "covered": 76,
+      "skipped": 0,
+      "pct": 98.7
+    },
+    "branches": {
+      "total": 15,
+      "covered": 14,
+      "skipped": 0,
+      "pct": 93.33
+    }
+  },
+  "./tests/react-demo.spec.ts": {
+    "lines": {
+      "total": 87,
+      "covered": 72,
+      "skipped": 0,
+      "pct": 82.75
+    },
+    "functions": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 87,
+      "covered": 72,
+      "skipped": 0,
+      "pct": 82.75
+    },
+    "branches": {
+      "total": 3,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "./tests/screenshot.spec.ts": {
+    "lines": {
+      "total": 105,
+      "covered": 105,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 105,
+      "covered": 105,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 5,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "./tests/server-api.spec.ts": {
+    "lines": {
+      "total": 242,
+      "covered": 235,
+      "skipped": 0,
+      "pct": 97.1
+    },
+    "functions": {
+      "total": 13,
+      "covered": 11,
+      "skipped": 0,
+      "pct": 84.61
+    },
+    "statements": {
+      "total": 242,
+      "covered": 235,
+      "skipped": 0,
+      "pct": 97.1
+    },
+    "branches": {
+      "total": 37,
+      "covered": 32,
+      "skipped": 0,
+      "pct": 86.48
+    }
+  },
+  "./tests/video.spec.ts": {
+    "lines": {
+      "total": 163,
+      "covered": 143,
+      "skipped": 0,
+      "pct": 87.73
+    },
+    "functions": {
+      "total": 2,
+      "covered": 2,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 163,
+      "covered": 143,
+      "skipped": 0,
+      "pct": 87.73
+    },
+    "branches": {
+      "total": 10,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 40
+    }
+  },
+  "./tests/zombie.spec.ts": {
+    "lines": {
+      "total": 141,
+      "covered": 135,
+      "skipped": 0,
+      "pct": 95.74
+    },
+    "functions": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 141,
+      "covered": 135,
+      "skipped": 0,
+      "pct": 95.74
+    },
+    "branches": {
+      "total": 15,
+      "covered": 10,
+      "skipped": 0,
+      "pct": 66.66
+    }
+  }
+}

@@ -36,7 +36,17 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run tests
-        run: pnpm test
+        run: pnpm coverage:ci
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage/coverage-summary.json
+            coverage/badge.json
+          if-no-files-found: ignore
 
       - name: Upload docs artifacts
         if: always()
@@ -55,6 +65,15 @@ jobs:
         with:
           file_pattern: "docs/screenshots/*.png docs/demo.webm docs/demo.gif"
           commit_message: "ci: update terminal docs assets"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit updated coverage badge
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          file_pattern: "coverage/coverage-summary.json coverage/badge.json"
+          commit_message: "ci: update coverage badge"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
 

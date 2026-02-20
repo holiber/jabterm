@@ -25,6 +25,9 @@ export default defineConfig({
       stderr: "pipe",
       env: {
         JABTERM_STRICT_PORT: "1",
+        ...(process.env.NODE_V8_COVERAGE
+          ? { NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE }
+          : {}),
       },
     },
     {
@@ -37,6 +40,9 @@ export default defineConfig({
       env: {
         DEMO_PORT: String(PORT + 1),
         JABTERM_WS_PORT: String(PORT),
+        ...(process.env.NODE_V8_COVERAGE
+          ? { NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE }
+          : {}),
       },
     },
   ],

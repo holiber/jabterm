@@ -26,6 +26,10 @@
     "build": "tsc -p tsconfig.server.json && tsc -p tsconfig.react.json",
     "prepack": "pnpm build",
     "test": "pnpm exec playwright test",
+    "test:coverage": "rm -rf .cache/v8-coverage coverage && NODE_V8_COVERAGE=.cache/v8-coverage pnpm test",
+    "coverage:report": "pnpm exec c8 report --temp-directory .cache/v8-coverage --reporter=text-summary --reporter=json-summary --report-dir coverage --all --src src/server --exclude \"**/playwright.config.ts\" && node scripts/normalize-coverage-summary.mjs",
+    "coverage:badge": "node scripts/generate-coverage-badge.mjs",
+    "coverage:ci": "pnpm test:coverage && pnpm coverage:report && pnpm coverage:badge",
     "dev:demo": "node scripts/dev-demo.mjs",
     "dev:server": "node bin/jabterm-server.mjs"
   },
@@ -48,6 +52,7 @@
     "@types/node": "^22",
     "@types/react": "^19.2.14",
     "@types/ws": "^8.18.1",
+    "c8": "^10.1.3",
     "typescript": "^5"
   },
   "pnpm": {
