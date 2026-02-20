@@ -67,12 +67,15 @@ test.describe("Terminal - demo video", () => {
     await page.keyboard.press("Enter");
     await page.waitForTimeout(700);
 
-    await page.keyboard.type(
-      "printf '--- /tmp/jabterm_video_demo.txt ---\\n' && cat /tmp/jabterm_video_demo.txt && printf '\\n------------------------------\\n'",
-      { delay: 10 },
-    );
+    await page.keyboard.type("cat /tmp/jabterm_video_demo.txt", { delay: 18 });
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(3000);
+
+    const rows = page.locator('[data-testid="jabterm-1"] .xterm-rows');
+    await expect(rows).toContainText("JabTerm demo video", { timeout: 10_000 });
+    await expect(rows).toContainText("This text is written inside a TUI editor.", {
+      timeout: 10_000,
+    });
+    await page.waitForTimeout(1200);
 
     const video = page.video();
     expect(video).not.toBeNull();
