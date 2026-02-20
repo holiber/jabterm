@@ -7,6 +7,30 @@ JabTerm is published as a single package with two subpath entry points:
 - **`jabterm/server`** — Node.js WebSocket server that spawns PTY processes via `node-pty`
 - **`jabterm/react`** — React component that renders xterm.js and connects to the server
 
+## Server API
+
+JabTerm provides two server entry points:
+
+- **`createJabtermServer(options)`** (recommended): embeddable, test-friendly server with an explicit lifecycle.
+- **`createTerminalServer(options)`** (legacy): convenience helper that immediately listens and returns `{ wss, port, close() }`.
+
+### `createJabtermServer(options)`
+
+`createJabtermServer()` returns an object with:
+
+- `listen(): Promise<{ address, family, port }>` — starts listening (supports `port: 0`)
+- `address(): { address, family, port }` — returns the bound address (after `listen()`)
+- `close(): Promise<void>` — deterministically terminates all WebSocket clients + PTYs
+
+Key options:
+
+- `port`, `host` — bind address (use `port: 0` for ephemeral ports)
+- `path` — WS upgrade base path; also supports per-session routing as `${path}/:terminalId`
+- `onCreatePty({ terminalId, request })` — per-session PTY config hook (cwd/env/shellArgs/cols/rows)
+- `authenticate(req)` — optional auth gate for upgrades
+- `allowedOrigins` — optional allowlist/policy for `Origin` header
+- `logger` — optional structured logger
+
 ## Data Flow — Direct Mode
 
 In development or local HTTP setups, the browser connects directly to the terminal server:
@@ -14,10 +38,10 @@ In development or local HTTP setups, the browser connects directly to the termin
 ```mermaid
 sequenceDiagram
     participant Browser
-    participant JabTermServer as JabTerm Server<br/>(node-pty + ws)
+    participant JabTermServer as JabTerm Server<br/>(http upgrade + ws + node-pty)
     participant Shell as Shell Process<br/>($SHELL / bash / zsh)
 
-    Browser->>JabTermServer: WebSocket connect ws://host:3223
+    Browser->>JabTermServer: WebSocket upgrade ws://host:3223/ws/:terminalId
     JabTermServer->>Shell: pty.spawn(resolveDefaultShell())
     Note over JabTermServer,Shell: PTY allocated (cols=80, rows=24)
 
@@ -107,12 +131,12 @@ flowchart TD
 
 ## Graceful Shutdown
 
-The server tracks all spawned PTY processes in a `Set<IPty>`.
+The server tracks all spawned PTY processes and WebSocket sessions.
 
-On `SIGTERM` / `SIGINT`:
-1. All tracked PTY processes are killed
-2. The WebSocket server is closed
-3. A 2-second fallback `setTimeout` ensures the process exits even if `wss.close()` hangs
+On `close()`:
+1. WebSocket clients are closed/terminated
+2. All tracked PTY processes are killed
+3. Both the WebSocket server and the underlying HTTP server are closed (with a bounded timeout)
 
 This prevents zombie shell processes when the server is stopped (e.g., during CI teardown
 or when Playwright finishes tests).

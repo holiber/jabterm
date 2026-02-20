@@ -130,6 +130,13 @@
     function App() {
       const [show1, setShow1] = React.useState(true);
       const [wideLeft, setWideLeft] = React.useState(false);
+      const term1Ref = React.useRef(null);
+
+      React.useEffect(() => {
+        // Used by Playwright tests; does not affect UI.
+        window.__jabterm = window.__jabterm || {};
+        window.__jabterm.term1 = term1Ref;
+      }, []);
 
       return e(
         React.Fragment,
@@ -175,7 +182,7 @@
               "div",
               { className: "term-container", "data-testid": "jabterm-1" },
               show1
-                ? e(JabTerm, { wsUrl: `ws://127.0.0.1:${WS_PORT}` })
+                ? e(JabTerm, { ref: term1Ref, wsUrl: `ws://127.0.0.1:${WS_PORT}` })
                 : e(
                     "div",
                     { className: "placeholder", "data-testid": "unmounted-1" },
