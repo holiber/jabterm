@@ -1,5 +1,7 @@
 # JabTerm
 
+[![CI](https://github.com/holiber/jabterm/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/holiber/jabterm/actions/workflows/ci.yml)
+
 **Just Another Browser Terminal** — drop-in React component + Node.js server for embedding real terminals in web apps.
 
 <p align="center">
