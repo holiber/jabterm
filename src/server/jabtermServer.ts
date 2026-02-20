@@ -103,8 +103,11 @@ interface Session {
   pty: pty.IPty;
   ptyExited: boolean;
   wsClosed: boolean;
+  helloVersion?: number;
   onWsMessage: (message: Buffer | string) => void;
 }
+
+const JABTERM_PROTOCOL_VERSION = 1;
 
 function defaultLogger(): JabtermLogger {
   return {
@@ -274,6 +277,18 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
           error: err instanceof Error ? err.message : String(err),
         });
         try {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Failed to spawn PTY",
+              }),
+            );
+          }
+        } catch {
+          /* ignore */
+        }
+        try {
           ws.close(1011, "pty_spawn_failed");
         } catch {
           try {
@@ -293,9 +308,19 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
         pty: ptyProcess,
         ptyExited: false,
         wsClosed: false,
+        helloVersion: undefined,
         onWsMessage: () => {},
       };
       sessions.add(session);
+
+      const sendError = (message: string) => {
+        if (ws.readyState !== WebSocket.OPEN) return;
+        try {
+          ws.send(JSON.stringify({ type: "error", message }));
+        } catch {
+          /* ignore */
+        }
+      };
 
       ptyProcess.onData((data: string) => {
         if (ws.readyState === WebSocket.OPEN) {
@@ -326,24 +351,48 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
           const msgStr = message.toString();
           if (msgStr.startsWith("{")) {
             const control = JSON.parse(msgStr) as unknown;
-            if (
-              typeof control === "object" &&
-              control &&
-              (control as any).type === "resize"
-            ) {
-              const cols = Math.max(Number((control as any).cols) || 80, 10);
-              const rows = Math.max(Number((control as any).rows) || 24, 10);
-              try {
-                ptyProcess.resize(cols, rows);
-                logger.debug?.("pty_resize", { terminalId, cols, rows });
-              } catch (resizeErr) {
-                logger.warn?.("pty_resize_failed", {
-                  terminalId,
-                  error:
-                    resizeErr instanceof Error ? resizeErr.message : String(resizeErr),
-                });
+            if (typeof control === "object" && control) {
+              const t = (control as any).type;
+              if (t === "hello") {
+                const version = Number((control as any).version);
+                session.helloVersion = Number.isFinite(version) ? version : undefined;
+                handled = true;
+
+                if (session.helloVersion !== JABTERM_PROTOCOL_VERSION) {
+                  sendError(
+                    `Protocol mismatch: client=${String(
+                      (control as any).version,
+                    )} server=${JABTERM_PROTOCOL_VERSION}`,
+                  );
+                  try {
+                    ws.close(1002, "protocol_mismatch");
+                  } catch {
+                    /* ignore */
+                  }
+                  try {
+                    ptyProcess.kill();
+                  } catch {
+                    /* ignore */
+                  }
+                  session.wsClosed = true;
+                  return;
+                }
+              } else if (t === "resize") {
+                const cols = Math.max(Number((control as any).cols) || 80, 10);
+                const rows = Math.max(Number((control as any).rows) || 24, 10);
+                try {
+                  ptyProcess.resize(cols, rows);
+                  logger.debug?.("pty_resize", { terminalId, cols, rows });
+                } catch (resizeErr) {
+                  logger.warn?.("pty_resize_failed", {
+                    terminalId,
+                    error:
+                      resizeErr instanceof Error ? resizeErr.message : String(resizeErr),
+                  });
+                  sendError("Resize failed");
+                }
+                handled = true;
               }
-              handled = true;
             }
           }
         } catch {
@@ -390,6 +439,11 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
           ws.off("message", onWsMessage);
         } catch {
           /* ignore */
+        }
+        if (!session.wsClosed && ws.readyState === WebSocket.OPEN) {
+          if (exitCode !== 0) {
+            sendError(`PTY exited with code ${exitCode}`);
+          }
         }
         if (!session.wsClosed && ws.readyState === WebSocket.OPEN) {
           const ok = exitCode === 0;
