@@ -79,7 +79,6 @@ They are fully independent:
 ```tsx
 <div style={{ display: "flex", gap: 8, height: 400 }}>
   <JabTerm wsUrl="ws://localhost:3223" />
-  <JabTerm wsUrl="ws://localhost:3223" />
 </div>
 ```
 
@@ -87,7 +86,7 @@ They are fully independent:
 
 | Echo command | vim/vi TUI editor |
 |---|---|
-| ![echo](docs/screenshots/terminal-echo.png) | ![editor](docs/screenshots/terminal-tui.png) |
+| ![echo](docs/screenshots/terminal-echo.png)
 
 ### Updating demo media assets
 
