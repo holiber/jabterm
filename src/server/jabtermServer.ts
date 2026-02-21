@@ -483,7 +483,7 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
     return { address: addr.address, family: addr.family, port: addr.port };
   }
 
-  async function close(): Promise<void> {
+  function close(): Promise<void> {
     if (closePromise) return closePromise;
     closing = true;
     logger.info?.("shutting_down");
