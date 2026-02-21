@@ -205,7 +205,7 @@ async function runPlaywright({
   const env = {
     ...process.env,
     TEST_ARTIFACTS_DIR: artifactsDir,
-    ...(human ? { AI_TEST_HUMAN: "1" } : {}),
+    ...(human ? { TEST_RUNNER_HUMAN: "1" } : {}),
   };
 
   const pwOut = path.join(artifactsDir, "pw-output");
@@ -249,7 +249,7 @@ async function runPlaywright({
 }
 
 const argv = await yargs(hideBin(process.argv))
-  .scriptName("ai-tests")
+  .scriptName("test-runner")
   .command(
     "$0 <suite>",
     "Run tests",

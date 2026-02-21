@@ -1,5 +1,5 @@
 export function isHumanMode() {
-  return process.env.AI_TEST_HUMAN === "1";
+  return process.env.TEST_RUNNER_HUMAN === "1";
 }
 
 export async function breath(ms = 250) {

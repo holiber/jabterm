@@ -1,11 +1,11 @@
-# ai-tests
+# test-runner
 
 Small, policy-light test runner intended to be copied between repos (or published).
 
 ## CLI
 
 ```bash
-ai-tests <suite> [--smoke] [--human] [--pkg <name>...] [--project <name>] [--allow-missing-project]
+test-runner <suite> [--smoke] [--human] [--pkg <name>...] [--project <name>] [--allow-missing-project]
 ```
 
 Suites:
@@ -27,7 +27,7 @@ Smoke rules (`--smoke`) apply to Playwright suites only:
 Human execution (`--human`) is orthogonal:
 
 - Playwright: `--headed`, `--workers=1`, `--trace=on`
-- Exposes `AI_TEST_HUMAN=1` for test utilities (see `ai-tests/human`)
+- Exposes `TEST_RUNNER_HUMAN=1` for test utilities (see `test-runner/human`)
 
 ## Artifacts
 
@@ -62,7 +62,7 @@ export default defineConfig({
 ## Test helper: `breath()`
 
 ```js
-import { breath } from "ai-tests/human";
+import { breath } from "test-runner/human";
 
 await breath(300);
 ```

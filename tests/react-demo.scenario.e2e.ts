@@ -6,7 +6,7 @@
  */
 
 import { test, expect } from "@playwright/test";
-import { breath } from "ai-tests/human";
+import { breath } from "test-runner/human";
 
 test.describe("React demo page", () => {
   test("mount/unmount and layout resize work", async ({ page }) => {
