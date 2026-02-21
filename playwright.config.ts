@@ -4,6 +4,9 @@ const PORT = parseInt(process.env.JABTERM_PORT || "3223", 10);
 
 export default defineConfig({
   testDir: "./tests",
+  // Keep Playwright focused on E2E specs. Vitest unit tests live under `tests/unit/**`
+  // and use the `.test.*` suffix, which Playwright would otherwise pick up by default.
+  testMatch: ["**/*.spec.ts", "**/*.spec.tsx"],
   outputDir: ".cache/test-results",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,

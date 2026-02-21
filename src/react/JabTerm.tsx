@@ -1,9 +1,10 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { Terminal } from "@xterm/xterm";
+import * as Xterm from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import type { JabTermHandle, JabTermProps, JabTermState } from "./types.js";
+import type { Terminal as XtermTerminal } from "@xterm/xterm";
 
 const DEFAULT_FONT_FAMILY =
   "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
@@ -27,7 +28,7 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
   ref,
 ) {
   const terminalRef = useRef<HTMLDivElement>(null);
-  const xtermRef = useRef<Terminal | null>(null);
+  const xtermRef = useRef<XtermTerminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const closingByCleanupRef = useRef(false);
@@ -166,7 +167,21 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
     disposedRef.current = false;
     setState("connecting");
 
-    const term = new Terminal({
+    const TerminalCtor =
+      // CDN (+esm) build exposes a named `Terminal` export.
+      // npm ESM build uses a default export object with `.Terminal`.
+      (Xterm as unknown as { Terminal?: unknown }).Terminal ??
+      (Xterm as unknown as { default?: { Terminal?: unknown } }).default?.Terminal ??
+      (Xterm as unknown as { "module.exports"?: { Terminal?: unknown } })["module.exports"]
+        ?.Terminal;
+
+    if (!TerminalCtor) {
+      throw new Error("xterm Terminal export not found");
+    }
+
+    const term = new (TerminalCtor as unknown as new (
+      options?: Record<string, unknown>,
+    ) => XtermTerminal)({
       cursorBlink: true,
       fontFamily,
       fontSize,
@@ -251,13 +266,13 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
 
     const encoder = new TextEncoder();
 
-    term.onData((data) => {
+    term.onData((data: string) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(encoder.encode(data));
       }
     });
 
-    term.onTitleChange((title) => {
+    term.onTitleChange((title: string) => {
       onTitleChange?.(title);
     });
 

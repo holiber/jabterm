@@ -32,7 +32,7 @@ const message = formatPct(pct);
 
 const badge = {
   schemaVersion: 1,
-  label: "server coverage",
+  label: "test coverage",
   message,
   color: coverageColor(Number(pct)),
 };
