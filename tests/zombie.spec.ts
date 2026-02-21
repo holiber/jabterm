@@ -14,7 +14,7 @@ const CLEANUP_DELAY_MS = 1500;
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("Terminal — zombie process prevention", () => {
+test.describe("@e2e Terminal — zombie process prevention", () => {
   test("pty process is killed when websocket closes", async () => {
     const ws = new WsClient(WS_URL);
 

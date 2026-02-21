@@ -16,7 +16,7 @@ test.beforeAll(() => {
   fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 });
 
-test.describe("Terminal — README screenshots", () => {
+test.describe("@integration Terminal — README screenshots", () => {
   test("capture echo terminal screenshot", async ({ page }) => {
     await page.goto("/");
 

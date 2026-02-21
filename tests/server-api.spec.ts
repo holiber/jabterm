@@ -57,7 +57,7 @@ async function waitForMatch(
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("Server API — createJabtermServer", () => {
+test.describe("@e2e Server API — createJabtermServer", () => {
   test("supports ephemeral port and deterministic shutdown", async () => {
     const server = createJabtermServer({
       host: "127.0.0.1",

@@ -18,7 +18,7 @@ const WS_URL = defaultWsUrl();
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("Terminal — echo round-trip (WS protocol)", () => {
+test.describe("@e2e Terminal — echo round-trip (WS protocol)", () => {
   test("echo command returns output", async () => {
     let ws!: WsClient;
     try {
