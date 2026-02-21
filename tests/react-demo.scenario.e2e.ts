@@ -1,14 +1,14 @@
 /**
- * React demo smoke test.
+ * React demo scenario.
  *
  * Ensures the demo page exercises `jabterm/react` (mount/unmount, layout resize,
  * and unexpected close UI) rather than a plain xterm CDN implementation.
  */
 
 import { test, expect } from "@playwright/test";
-import { breath } from "./helpers/human.js";
+import { breath } from "ai-tests/human";
 
-test.describe("@scenario React demo page", () => {
+test.describe("React demo page", () => {
   test("mount/unmount and layout resize work", async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on("pageerror", (err) => consoleErrors.push(err.message));
@@ -71,7 +71,6 @@ test.describe("@scenario React demo page", () => {
     expect(after).not.toBeNull();
 
     expect(Math.abs(after!.width - before!.width)).toBeGreaterThan(20);
-
     expect(consoleErrors).toEqual([]);
   });
 

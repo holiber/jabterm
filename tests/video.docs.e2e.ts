@@ -80,7 +80,7 @@ test.use({
   },
 });
 
-test.describe("@scenario @docs @slow Terminal - demo video", () => {
+test.describe("Terminal - demo video", () => {
   test("records terminal usage flow", async ({ page }) => {
     test.setTimeout(120_000);
 
@@ -161,3 +161,4 @@ test.describe("@scenario @docs @slow Terminal - demo video", () => {
     expect(gifSize).toBeGreaterThan(0);
   });
 });
+

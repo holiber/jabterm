@@ -39,7 +39,7 @@ jobs:
         run: JABTERM_SKIP_BUILD=1 pnpm coverage:ci
 
       - name: Run docs scenario tests (docs assets)
-        run: JABTERM_SCENARIO_ONLY_DOCS=1 JABTERM_SKIP_BUILD=1 pnpm run test:scenario
+        run: pnpm run test:docs
 
       - name: Upload coverage artifacts
         if: always()

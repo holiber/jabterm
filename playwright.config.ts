@@ -1,73 +1,25 @@
 import { defineConfig } from "@playwright/test";
-import path from "node:path";
 
 const PORT = parseInt(process.env.JABTERM_PORT || "3223", 10);
-const ARTIFACTS_DIR = process.env.TEST_ARTIFACTS_DIR;
-const IS_SMOKE = process.env.JABTERM_SMOKE === "1";
-const HUMAN_SLOWMO_MS = parseInt(process.env.JABTERM_HUMAN_SLOWMO_MS || "0", 10);
+const DEMO_PORT = PORT + 1;
 
-const outputDir = ARTIFACTS_DIR
-  ? path.join(ARTIFACTS_DIR, "test-results")
-  : ".cache/test-results";
-const reportDir = ARTIFACTS_DIR
-  ? path.join(ARTIFACTS_DIR, "report")
-  : ".cache/report";
-
-const smokePerTestTimeoutMs = parseInt(
-  process.env.SMOKE_PER_TEST_TIMEOUT_MS || "30000",
-  10,
-);
-const smokeTotalTimeoutMs = parseInt(
-  process.env.SMOKE_TOTAL_TIMEOUT_MS || "180000",
-  10,
-);
+const E2E = /.*\.e2e\.(ts|js)x?$/;
+const SCENARIO = /.*\.scenario\.e2e\.(ts|js)x?$/;
+const DOCS = /.*\.docs\.e2e\.(ts|js)x?$/;
 
 export default defineConfig({
   testDir: "./tests",
-  // Keep Playwright focused on E2E specs. Vitest unit tests live under `tests/unit/**`
-  // and use the `.test.*` suffix, which Playwright would otherwise pick up by default.
-  testMatch: ["**/*.spec.ts", "**/*.spec.tsx"],
-  outputDir,
-  ...(IS_SMOKE ? { timeout: smokePerTestTimeoutMs } : {}),
-  ...(IS_SMOKE ? { globalTimeout: smokeTotalTimeoutMs } : {}),
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  reporter: IS_SMOKE
-    ? [
-        [
-          "json",
-          {
-            outputFile:
-              process.env.PW_JSON_OUTPUT_FILE ||
-              (ARTIFACTS_DIR
-                ? path.join(ARTIFACTS_DIR, "playwright-report.json")
-                : ".cache/playwright-report.json"),
-          },
-        ],
-      ]
-    : [["html", { outputFolder: reportDir, open: "never" }]],
+  use: {
+    baseURL: `http://127.0.0.1:${DEMO_PORT}`,
+  },
   projects: [
-    {
-      name: "default",
-      use: {
-        baseURL: `http://127.0.0.1:${PORT + 1}`,
-      },
-    },
-    {
-      name: "human",
-      use: {
-        baseURL: `http://127.0.0.1:${PORT + 1}`,
-        headless: false,
-        video: "on",
-        trace: "on",
-        screenshot: "on",
-        ...(HUMAN_SLOWMO_MS > 0
-          ? { launchOptions: { slowMo: HUMAN_SLOWMO_MS } }
-          : {}),
-      },
-    },
+    { name: "e2e", testMatch: E2E, testIgnore: [SCENARIO, DOCS] },
+    { name: "scenario", testMatch: SCENARIO, testIgnore: [DOCS] },
+    { name: "docs", testMatch: DOCS },
   ],
   webServer: [
     {
@@ -86,13 +38,13 @@ export default defineConfig({
     },
     {
       command: `node tests/serve-demo.mjs`,
-      port: PORT + 1,
+      port: DEMO_PORT,
       reuseExistingServer: !process.env.CI,
       timeout: 10_000,
       stdout: "pipe",
       stderr: "pipe",
       env: {
-        DEMO_PORT: String(PORT + 1),
+        DEMO_PORT: String(DEMO_PORT),
         JABTERM_WS_PORT: String(PORT),
         ...(process.env.NODE_V8_COVERAGE
           ? { NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE }
