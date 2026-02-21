@@ -67,8 +67,8 @@ export interface JabtermServerOptions {
    * If `Origin` is absent (e.g. node `ws` client), the connection is allowed.
    */
   allowedOrigins?:
-    | string[]
-    | ((origin: string | undefined, req: IncomingMessage) => boolean);
+  | string[]
+  | ((origin: string | undefined, req: IncomingMessage) => boolean);
   /** Optional structured logger. */
   logger?: JabtermLogger;
   /**
@@ -129,11 +129,11 @@ function replyHttpError(socket: Duplex, status: number, reason: string) {
   try {
     socket.write(
       `HTTP/1.1 ${status} ${reason}\r\n` +
-        "Connection: close\r\n" +
-        "Content-Type: text/plain; charset=utf-8\r\n" +
-        `Content-Length: ${Buffer.byteLength(reason)}\r\n` +
-        "\r\n" +
-        reason,
+      "Connection: close\r\n" +
+      "Content-Type: text/plain; charset=utf-8\r\n" +
+      `Content-Length: ${Buffer.byteLength(reason)}\r\n` +
+      "\r\n" +
+      reason,
     );
   } catch {
     /* ignore */
@@ -309,7 +309,7 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
         ptyExited: false,
         wsClosed: false,
         helloVersion: undefined,
-        onWsMessage: () => {},
+        onWsMessage: () => { },
       };
       sessions.add(session);
 
@@ -483,12 +483,13 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
     return { address: addr.address, family: addr.family, port: addr.port };
   }
 
-  async function close(): Promise<void> {
-    if (closing) return closePromise ?? Promise.resolve();
+  function close(): Promise<void> {
+    if (closePromise) return closePromise;
     closing = true;
     logger.info?.("shutting_down");
 
-    const killAndCloseClients = () => {
+    const killAndCloseClients = async () => {
+      // Phase 1: Close all WS connections and detach message handlers
       for (const session of sessions) {
         try {
           session.wsClosed = true;
@@ -515,6 +516,15 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
         } catch {
           /* ignore */
         }
+      }
+
+      // Wait for WS close frames to be processed and onData handlers to detach.
+      // Without this, killing PTY while onData is still wired to a closing WS
+      // triggers an uncatchable native C++ exception in node-pty (SIGABRT).
+      await new Promise<void>((r) => setTimeout(r, 100));
+
+      // Phase 2: Kill PTY processes (safe — WS clients are disconnected)
+      for (const session of sessions) {
         try {
           if (!session.ptyExited) session.pty.kill();
         } catch {
@@ -532,9 +542,8 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
       ptys.clear();
     };
 
-    killAndCloseClients();
-
     closePromise = (async () => {
+      await killAndCloseClients();
       await new Promise<void>((resolve) => {
         let done = false;
         const finish = () => {
