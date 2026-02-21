@@ -484,7 +484,7 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
   }
 
   async function close(): Promise<void> {
-    if (closing) return closePromise ?? Promise.resolve();
+    if (closePromise) return closePromise;
     closing = true;
     logger.info?.("shutting_down");
 
@@ -542,9 +542,8 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
       ptys.clear();
     };
 
-    await killAndCloseClients();
-
     closePromise = (async () => {
+      await killAndCloseClients();
       await new Promise<void>((resolve) => {
         let done = false;
         const finish = () => {

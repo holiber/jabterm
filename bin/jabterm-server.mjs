@@ -56,7 +56,7 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv.slice(2));
 
-const port = args.port || parseInt(process.env.JABTERM_PORT || "3223", 10);
+const port = args.port ?? parseInt(process.env.JABTERM_PORT || "3223", 10);
 
 const server = await createTerminalServer({
   port,
