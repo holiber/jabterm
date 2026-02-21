@@ -14,7 +14,7 @@ function artifactsDirFor(suite) {
     case "e2e":
       return path.join(ROOT, ".cache/tests/test-e2e__playwright");
     case "integration":
-      return path.join(ROOT, ".cache/tests/test-integration__playwright");
+      return path.join(ROOT, ".cache/tests/test-integration__none");
     case "smoke":
       return path.join(ROOT, ".cache/tests/test-smoke__scenario");
     case "all":
@@ -110,7 +110,13 @@ async function runUnit({ artifactsDir, logStream }) {
   });
 }
 
-async function runPlaywright({ artifactsDir, logStream, tag, smoke }) {
+async function runPlaywright({
+  artifactsDir,
+  logStream,
+  grep,
+  grepInvert = [],
+  smoke,
+}) {
   const skipBuild = process.env.JABTERM_SKIP_BUILD === "1";
 
   const env = envWithArtifacts(artifactsDir, smoke ? { JABTERM_SMOKE: "1" } : {});
@@ -125,7 +131,8 @@ async function runPlaywright({ artifactsDir, logStream, tag, smoke }) {
     if (build.code !== 0) return { code: build.code, signal: build.signal };
   }
 
-  const args = ["exec", "playwright", "test", "--grep", tag];
+  const args = ["exec", "playwright", "test", "--grep", grep];
+  for (const inv of grepInvert) args.push("--grep-invert", inv);
   if (smoke) args.push("--max-failures=1", "--quiet");
 
   return await spawnLogged("pnpm", args, {
@@ -163,6 +170,21 @@ function getFinalStatus(test) {
     if (r.status === "skipped") return "skipped";
   }
   return "unknown";
+}
+
+function scenarioFiltersFromEnv() {
+  const onlyDocs = process.env.JABTERM_SCENARIO_ONLY_DOCS === "1";
+  const includeDocs = process.env.JABTERM_SCENARIO_INCLUDE_DOCS === "1";
+  const includeSlow = process.env.JABTERM_SCENARIO_INCLUDE_SLOW === "1";
+
+  if (onlyDocs) {
+    return { grep: "@docs", grepInvert: [] };
+  }
+
+  const grepInvert = [];
+  if (!includeDocs) grepInvert.push("@docs");
+  if (!includeSlow) grepInvert.push("@slow");
+  return { grep: "@scenario", grepInvert };
 }
 
 async function runSmoke({ artifactsDir, logStream }) {
@@ -213,6 +235,10 @@ async function runSmoke({ artifactsDir, logStream }) {
       "test",
       "--grep",
       "@scenario",
+      "--grep-invert",
+      "@docs",
+      "--grep-invert",
+      "@slow",
       "--max-failures=1",
       "--quiet",
     ],
@@ -302,10 +328,12 @@ async function main() {
     }
 
     if (suite === "scenario") {
+      const { grep, grepInvert } = scenarioFiltersFromEnv();
       const res = await runPlaywright({
         artifactsDir,
         logStream,
-        tag: "@scenario",
+        grep,
+        grepInvert,
         smoke: false,
       });
       process.exit(res.code || 0);
@@ -315,20 +343,22 @@ async function main() {
       const res = await runPlaywright({
         artifactsDir,
         logStream,
-        tag: "@e2e",
+        grep: "@e2e",
         smoke: false,
       });
       process.exit(res.code || 0);
     }
 
     if (suite === "integration") {
-      const res = await runPlaywright({
-        artifactsDir,
-        logStream,
-        tag: "@integration",
-        smoke: false,
-      });
-      process.exit(res.code || 0);
+      logStream.write(
+        Buffer.from(
+          "This repo intentionally has no integration tests. (contract script exists)\n",
+        ),
+      );
+      process.stdout.write(
+        "No integration tests in this repo. (intentional)\n",
+      );
+      process.exit(0);
     }
 
     if (suite === "all") {
@@ -362,7 +392,17 @@ async function main() {
       await mkdirp(scenarioDir);
       const scenario = await spawnLogged(
         "pnpm",
-        ["exec", "playwright", "test", "--grep", "@scenario"],
+        [
+          "exec",
+          "playwright",
+          "test",
+          "--grep",
+          "@scenario",
+          "--grep-invert",
+          "@docs",
+          "--grep-invert",
+          "@slow",
+        ],
         {
           cwd: ROOT,
           env: envWithArtifacts(scenarioDir, pwEnvBase),

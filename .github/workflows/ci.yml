@@ -38,8 +38,8 @@ jobs:
       - name: Run tests
         run: JABTERM_SKIP_BUILD=1 pnpm coverage:ci
 
-      - name: Run integration tests (docs assets)
-        run: JABTERM_SKIP_BUILD=1 pnpm run test:integration
+      - name: Run docs scenario tests (docs assets)
+        run: JABTERM_SCENARIO_ONLY_DOCS=1 JABTERM_SKIP_BUILD=1 pnpm run test:scenario
 
       - name: Upload coverage artifacts
         if: always()

@@ -80,7 +80,7 @@ test.use({
   },
 });
 
-test.describe("@integration Terminal - demo video", () => {
+test.describe("@scenario @docs @slow Terminal - demo video", () => {
   test("records terminal usage flow", async ({ page }) => {
     test.setTimeout(120_000);
 
