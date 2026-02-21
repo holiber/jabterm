@@ -1,7 +1,7 @@
 # JabTerm
 
 [![CI](https://github.com/holiber/jabterm/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/holiber/jabterm/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fholiber%2Fjabterm%2Fmain%2Fcoverage%2Fbadge.json)](https://github.com/holiber/jabterm/blob/main/coverage/coverage-summary.json)
+[![Test coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fholiber%2Fjabterm%2Fmain%2Fcoverage%2Fbadge.json)](https://github.com/holiber/jabterm/blob/main/coverage/coverage-summary.json)
 
 **Just Another Browser Terminal** — run your real terminal in browser
 
