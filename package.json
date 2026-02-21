@@ -40,7 +40,9 @@
     "coverage:badge": "node scripts/generate-coverage-badge.mjs coverage/coverage-summary.json coverage/badge.json",
     "coverage:ci": "pnpm test:server:coverage && pnpm coverage:server:report && pnpm test:client:coverage && node scripts/normalize-coverage-summary.mjs .cache/coverage/client/coverage-summary.json && pnpm coverage:merge && pnpm coverage:badge",
     "dev:demo": "node scripts/dev-demo.mjs",
-    "dev:server": "node bin/jabterm-server.mjs"
+    "dev:server": "node bin/jabterm-server.mjs",
+    "pw:ui": "pnpm exec playwright test --ui",
+    "pw:trace": "pnpm exec playwright show-trace"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
