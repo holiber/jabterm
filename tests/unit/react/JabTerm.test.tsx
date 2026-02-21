@@ -55,6 +55,7 @@ vi.mock("@xterm/xterm", () => {
 
   return {
     Terminal,
+    default: { Terminal },
     __getLastTerminal: () => lastTerminal,
   };
 });
