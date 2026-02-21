@@ -1,15 +1,23 @@
 /**
- * React demo smoke test.
+ * React demo scenario.
  *
  * Ensures the demo page exercises `jabterm/react` (mount/unmount, layout resize,
  * and unexpected close UI) rather than a plain xterm CDN implementation.
  */
 
 import { test, expect } from "@playwright/test";
+import { breath } from "test-runner/human";
 
 test.describe("React demo page", () => {
   test("mount/unmount and layout resize work", async ({ page }) => {
-    await page.goto("/");
+    const consoleErrors: string[] = [];
+    page.on("pageerror", (err) => consoleErrors.push(err.message));
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+
+    const resp = await page.goto("/");
+    expect(resp?.ok()).toBe(true);
 
     const term1 = page.locator('[data-testid="jabterm-1"] .xterm-screen');
     await expect(term1).toBeVisible({ timeout: 15_000 });
@@ -63,16 +71,24 @@ test.describe("React demo page", () => {
     expect(after).not.toBeNull();
 
     expect(Math.abs(after!.width - before!.width)).toBeGreaterThan(20);
+    expect(consoleErrors).toEqual([]);
   });
 
   test("shows close message when shell exits", async ({ page }) => {
-    await page.goto("/");
+    const consoleErrors: string[] = [];
+    page.on("pageerror", (err) => consoleErrors.push(err.message));
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+
+    const resp = await page.goto("/");
+    expect(resp?.ok()).toBe(true);
 
     const term1 = page.locator('[data-testid="jabterm-1"] .xterm-screen');
     await expect(term1).toBeVisible({ timeout: 15_000 });
 
     await term1.click();
-    await page.waitForTimeout(500);
+    await breath(500);
     await page.keyboard.type("exit", { delay: 10 });
     await page.keyboard.press("Enter");
 
@@ -83,6 +99,8 @@ test.describe("React demo page", () => {
     await expect(state1).toHaveAttribute("data-jabterm-state", "closed", {
       timeout: 15_000,
     });
+
+    expect(consoleErrors).toEqual([]);
   });
 });
 

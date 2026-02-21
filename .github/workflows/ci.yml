@@ -36,7 +36,10 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run tests
-        run: pnpm coverage:ci
+        run: JABTERM_SKIP_BUILD=1 pnpm coverage:ci
+
+      - name: Run docs scenario tests (docs assets)
+        run: pnpm run test:docs
 
       - name: Upload coverage artifacts
         if: always()

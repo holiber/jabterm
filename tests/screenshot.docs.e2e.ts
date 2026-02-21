@@ -87,13 +87,17 @@ test.describe("Terminal — README screenshots", () => {
 
     // Type in terminal 1
     await term1.click();
-    await page.keyboard.type('echo "Terminal 1 — Hello from JabTerm"', { delay: 20 });
+    await page.keyboard.type('echo "Terminal 1 — Hello from JabTerm"', {
+      delay: 20,
+    });
     await page.keyboard.press("Enter");
     await page.waitForTimeout(1000);
 
     // Type in terminal 2
     await term2.click();
-    await page.keyboard.type('echo "Terminal 2 — Independent session"', { delay: 20 });
+    await page.keyboard.type('echo "Terminal 2 — Independent session"', {
+      delay: 20,
+    });
     await page.keyboard.press("Enter");
     await page.waitForTimeout(1000);
 
@@ -103,3 +107,4 @@ test.describe("Terminal — README screenshots", () => {
     });
   });
 });
+

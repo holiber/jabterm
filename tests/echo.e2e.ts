@@ -59,3 +59,4 @@ test.describe("Terminal — echo round-trip (WS protocol)", () => {
     expect(result).toBe("open");
   });
 });
+

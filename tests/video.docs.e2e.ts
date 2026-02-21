@@ -161,3 +161,4 @@ test.describe("Terminal - demo video", () => {
     expect(gifSize).toBeGreaterThan(0);
   });
 });
+
