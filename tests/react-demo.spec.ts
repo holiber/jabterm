@@ -6,6 +6,7 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { breath } from "./helpers/human.js";
 
 test.describe("@scenario React demo page", () => {
   test("mount/unmount and layout resize work", async ({ page }) => {
@@ -88,7 +89,7 @@ test.describe("@scenario React demo page", () => {
     await expect(term1).toBeVisible({ timeout: 15_000 });
 
     await term1.click();
-    await page.waitForTimeout(500);
+    await breath(500);
     await page.keyboard.type("exit", { delay: 10 });
     await page.keyboard.press("Enter");
 

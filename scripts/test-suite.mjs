@@ -5,6 +5,24 @@ import { spawn } from "node:child_process";
 
 const ROOT = process.cwd();
 
+function getPackageManager() {
+  try {
+    const pkgPath = path.join(ROOT, "package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+    const pm = String(pkg?.packageManager || "");
+    if (pm.startsWith("pnpm@")) return "pnpm";
+    if (pm.startsWith("npm@")) return "npm";
+  } catch {
+    /* ignore */
+  }
+
+  if (fs.existsSync(path.join(ROOT, "pnpm-lock.yaml"))) return "pnpm";
+  if (fs.existsSync(path.join(ROOT, "package-lock.json"))) return "npm";
+  return "npm";
+}
+
+const PM = getPackageManager();
+
 function artifactsDirFor(suite) {
   switch (suite) {
     case "unit":
@@ -102,7 +120,7 @@ function envWithArtifacts(artifactsDir, extraEnv = {}) {
 
 async function runUnit({ artifactsDir, logStream }) {
   const env = envWithArtifacts(artifactsDir);
-  return await spawnLogged("pnpm", ["exec", "vitest", "run"], {
+  return await spawnLogged(PM, ["exec", "vitest", "run"], {
     cwd: ROOT,
     env,
     logStream,
@@ -116,13 +134,20 @@ async function runPlaywright({
   grep,
   grepInvert = [],
   smoke,
+  human,
 }) {
   const skipBuild = process.env.JABTERM_SKIP_BUILD === "1";
 
-  const env = envWithArtifacts(artifactsDir, smoke ? { JABTERM_SMOKE: "1" } : {});
+  const env = envWithArtifacts(
+    artifactsDir,
+    {
+      ...(smoke ? { JABTERM_SMOKE: "1" } : {}),
+      ...(human ? { JABTERM_HUMAN: "1" } : {}),
+    },
+  );
 
   if (!skipBuild) {
-    const build = await spawnLogged("pnpm", ["run", "build"], {
+    const build = await spawnLogged(PM, ["run", "build"], {
       cwd: ROOT,
       env,
       logStream,
@@ -133,9 +158,10 @@ async function runPlaywright({
 
   const args = ["exec", "playwright", "test", "--grep", grep];
   for (const inv of grepInvert) args.push("--grep-invert", inv);
+  args.push("--project", human ? "human" : "default");
   if (smoke) args.push("--max-failures=1", "--quiet");
 
-  return await spawnLogged("pnpm", args, {
+  return await spawnLogged(PM, args, {
     cwd: ROOT,
     env,
     logStream,
@@ -209,15 +235,16 @@ async function runSmoke({ artifactsDir, logStream }) {
 
   const skipBuild = process.env.JABTERM_SKIP_BUILD === "1";
   if (!skipBuild) {
-    const build = await spawnLogged("pnpm", ["run", "build"], {
+    const build = await spawnLogged(PM, ["run", "build"], {
       cwd: ROOT,
       env,
       logStream,
       passthrough: false,
     });
     if (build.code !== 0) {
-      console.log(`SMOKE FAIL: build (exit ${build.code ?? "?"})`);
-      console.log(`Artifacts: ${artifactsDir}`);
+      console.log(
+        `SMOKE FAIL: build (exit ${build.code ?? "?"}) | Artifacts: ${artifactsDir}`,
+      );
       process.exit(build.code || 1);
     }
   }
@@ -227,31 +254,37 @@ async function runSmoke({ artifactsDir, logStream }) {
   }, warnAfterMs);
   warn.unref?.();
 
-  const pw = await spawnLoggedWithTimeout(
-    "pnpm",
-    [
-      "exec",
-      "playwright",
-      "test",
-      "--grep",
-      "@scenario",
-      "--grep-invert",
-      "@docs",
-      "--grep-invert",
-      "@slow",
-      "--max-failures=1",
-      "--quiet",
-    ],
-    { cwd: ROOT, env, logStream, timeoutMs: totalTimeoutMs },
-  );
+  const smokeArgs = [
+    "exec",
+    "playwright",
+    "test",
+    "--grep",
+    "@scenario",
+    "--grep-invert",
+    "@docs",
+    "--grep-invert",
+    "@slow",
+    "--project",
+    process.env.JABTERM_HUMAN === "1" ? "human" : "default",
+    "--max-failures=1",
+    "--quiet",
+  ];
+
+  const pw = await spawnLoggedWithTimeout(PM, smokeArgs, {
+    cwd: ROOT,
+    env,
+    logStream,
+    timeoutMs: totalTimeoutMs,
+  });
   clearTimeout(warn);
 
   const elapsedS = (Date.now() - startedAt) / 1000;
   const slow = elapsedS * 1000 > warnAfterMs;
 
   if (pw.timedOut) {
-    console.log(`SMOKE FAIL: scenario (timeout after ${Math.round(elapsedS)}s)`);
-    console.log(`Artifacts: ${artifactsDir}`);
+    console.log(
+      `SMOKE FAIL: scenario (timeout after ${Math.round(elapsedS)}s) | Artifacts: ${artifactsDir}`,
+    );
     process.exit(1);
   }
 
@@ -296,18 +329,22 @@ async function runSmoke({ artifactsDir, logStream }) {
     /* ignore */
   }
 
-  console.log(`SMOKE FAIL: ${truncateOneLine(failName, 80)} (${reason})`);
-  console.log(`Artifacts: ${artifactsDir}`);
+  console.log(
+    `SMOKE FAIL: ${truncateOneLine(failName, 80)} (${reason}) | Artifacts: ${artifactsDir}`,
+  );
   process.exit(pw.code || 1);
 }
 
 async function main() {
-  const suite = process.argv[2];
+  const args = process.argv.slice(2);
+  const suite = args[0];
   if (!suite) {
     throw new Error(
-      "Usage: node scripts/test-suite.mjs <unit|scenario|e2e|integration|smoke|all>",
+      "Usage: node scripts/test-suite.mjs <unit|scenario|e2e|integration|smoke|all> [--human]",
     );
   }
+
+  const human = args.includes("--human");
 
   const artifactsDir = artifactsDirFor(suite);
   await rmrf(artifactsDir);
@@ -318,6 +355,7 @@ async function main() {
 
   try {
     if (suite === "smoke") {
+      if (human) process.env.JABTERM_HUMAN = "1";
       await runSmoke({ artifactsDir, logStream });
       return;
     }
@@ -335,6 +373,7 @@ async function main() {
         grep,
         grepInvert,
         smoke: false,
+        human,
       });
       process.exit(res.code || 0);
     }
@@ -345,6 +384,7 @@ async function main() {
         logStream,
         grep: "@e2e",
         smoke: false,
+        human,
       });
       process.exit(res.code || 0);
     }
@@ -363,7 +403,7 @@ async function main() {
 
     if (suite === "all") {
       // Unit first for fast feedback.
-      const unit = await spawnLogged("pnpm", ["exec", "vitest", "run"], {
+      const unit = await spawnLogged(PM, ["exec", "vitest", "run"], {
         cwd: ROOT,
         env: envWithArtifacts(path.join(artifactsDir, "unit")),
         logStream,
@@ -373,7 +413,7 @@ async function main() {
 
       const skipBuild = process.env.JABTERM_SKIP_BUILD === "1";
       if (!skipBuild) {
-        const build = await spawnLogged("pnpm", ["run", "build"], {
+        const build = await spawnLogged(PM, ["run", "build"], {
           cwd: ROOT,
           env: envWithArtifacts(artifactsDir),
           logStream,
@@ -391,7 +431,7 @@ async function main() {
       await rmrf(scenarioDir);
       await mkdirp(scenarioDir);
       const scenario = await spawnLogged(
-        "pnpm",
+        PM,
         [
           "exec",
           "playwright",
@@ -402,6 +442,8 @@ async function main() {
           "@docs",
           "--grep-invert",
           "@slow",
+          "--project",
+          "default",
         ],
         {
           cwd: ROOT,
@@ -415,16 +457,12 @@ async function main() {
       const e2eDir = path.join(artifactsDir, "e2e");
       await rmrf(e2eDir);
       await mkdirp(e2eDir);
-      const e2e = await spawnLogged(
-        "pnpm",
-        ["exec", "playwright", "test", "--grep", "@e2e"],
-        {
-          cwd: ROOT,
-          env: envWithArtifacts(e2eDir, pwEnvBase),
-          logStream,
-          passthrough: true,
-        },
-      );
+      const e2e = await spawnLogged(PM, ["exec", "playwright", "test", "--grep", "@e2e", "--project", "default"], {
+        cwd: ROOT,
+        env: envWithArtifacts(e2eDir, pwEnvBase),
+        logStream,
+        passthrough: true,
+      });
       if (e2e.code !== 0) process.exit(e2e.code || 1);
 
       process.exit(0);

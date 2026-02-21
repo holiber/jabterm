@@ -4,6 +4,7 @@ import path from "node:path";
 const PORT = parseInt(process.env.JABTERM_PORT || "3223", 10);
 const ARTIFACTS_DIR = process.env.TEST_ARTIFACTS_DIR;
 const IS_SMOKE = process.env.JABTERM_SMOKE === "1";
+const HUMAN_SLOWMO_MS = parseInt(process.env.JABTERM_HUMAN_SLOWMO_MS || "0", 10);
 
 const outputDir = ARTIFACTS_DIR
   ? path.join(ARTIFACTS_DIR, "test-results")
@@ -47,9 +48,27 @@ export default defineConfig({
         ],
       ]
     : [["html", { outputFolder: reportDir, open: "never" }]],
-  use: {
-    baseURL: `http://127.0.0.1:${PORT + 1}`,
-  },
+  projects: [
+    {
+      name: "default",
+      use: {
+        baseURL: `http://127.0.0.1:${PORT + 1}`,
+      },
+    },
+    {
+      name: "human",
+      use: {
+        baseURL: `http://127.0.0.1:${PORT + 1}`,
+        headless: false,
+        video: "on",
+        trace: "on",
+        screenshot: "on",
+        ...(HUMAN_SLOWMO_MS > 0
+          ? { launchOptions: { slowMo: HUMAN_SLOWMO_MS } }
+          : {}),
+      },
+    },
+  ],
   webServer: [
     {
       command: `node bin/jabterm-server.mjs --port ${PORT}`,
