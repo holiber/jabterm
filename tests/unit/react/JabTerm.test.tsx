@@ -6,6 +6,7 @@ import type { JabTermHandle } from "../../../src/react/types.js";
 import JabTerm from "../../../src/react/JabTerm.js";
 
 let lastTerminal: any = null;
+let lastTerminalOptions: any = null;
 
 vi.mock("@xterm/addon-fit", () => {
   return {
@@ -32,8 +33,9 @@ vi.mock("@xterm/xterm", () => {
     private onDataHandlers: Array<(data: string) => void> = [];
     private onTitleHandlers: Array<(title: string) => void> = [];
 
-    constructor() {
+    constructor(options?: any) {
       lastTerminal = this;
+      lastTerminalOptions = options ?? null;
     }
 
     onData(cb: (data: string) => void) {
@@ -66,6 +68,9 @@ function getMockWs() {
 }
 
 describe("<JabTerm />", () => {
+  const countResizeMessages = (ws: any) =>
+    ws.sent.filter((x: unknown) => typeof x === "string" && x.includes("\"resize\"")).length;
+
   it("handshakes on open and captures incoming output", async () => {
     const ref = createRef<JabTermHandle>();
     render(<JabTerm wsUrl="ws://example.test/ws" ref={ref} />);
@@ -138,6 +143,62 @@ describe("<JabTerm />", () => {
 
     expect(lastTerminal).toBeTruthy();
     expect(lastTerminal.dispose).toHaveBeenCalled();
+  });
+
+  it("passes accessibilitySupport to xterm Terminal options", async () => {
+    lastTerminalOptions = null;
+    render(<JabTerm wsUrl="ws://example.test/ws" accessibilitySupport="on" />);
+    await waitFor(() => {
+      expect(lastTerminalOptions).toBeTruthy();
+    });
+    expect(lastTerminalOptions.accessibilitySupport).toBe("on");
+  });
+
+  it("deduplicates resize messages when dimensions do not change", () => {
+    vi.useFakeTimers();
+    try {
+      render(<JabTerm wsUrl="ws://example.test/ws" />);
+      const ws = getMockWs();
+      expect(ws).toBeTruthy();
+
+      act(() => ws.__open());
+      const initialResizeCount = countResizeMessages(ws);
+      expect(initialResizeCount).toBeGreaterThanOrEqual(1);
+
+      act(() => {
+        vi.advanceTimersByTime(150);
+        window.dispatchEvent(new Event("resize"));
+        window.dispatchEvent(new Event("resize"));
+      });
+
+      expect(countResizeMessages(ws)).toBe(initialResizeCount);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("sends resize when terminal dimensions change", () => {
+    vi.useFakeTimers();
+    try {
+      render(<JabTerm wsUrl="ws://example.test/ws" />);
+      const ws = getMockWs();
+      expect(ws).toBeTruthy();
+
+      act(() => ws.__open());
+      act(() => vi.advanceTimersByTime(150));
+      const before = countResizeMessages(ws);
+
+      expect(lastTerminal).toBeTruthy();
+      lastTerminal.cols = 120;
+      lastTerminal.rows = 40;
+
+      act(() => window.dispatchEvent(new Event("resize")));
+      expect(countResizeMessages(ws)).toBe(before + 1);
+      expect(String(ws.sent[ws.sent.length - 1])).toContain("\"cols\":120");
+      expect(String(ws.sent[ws.sent.length - 1])).toContain("\"rows\":40");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

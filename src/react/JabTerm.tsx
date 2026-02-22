@@ -23,6 +23,7 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
     className,
     fontSize = 13,
     fontFamily = DEFAULT_FONT_FAMILY,
+    accessibilitySupport,
     theme,
   },
   ref,
@@ -33,6 +34,7 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
   const wsRef = useRef<WebSocket | null>(null);
   const closingByCleanupRef = useRef(false);
   const disposedRef = useRef(false);
+  const lastSentSizeRef = useRef<{ cols: number; rows: number }>({ cols: 0, rows: 0 });
   const [state, setState] = useState<JabTermState>("connecting");
 
   const captureEnabledRef = useRef<boolean>(captureOutput);
@@ -44,6 +46,19 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
 
   captureEnabledRef.current = captureOutput;
   captureMaxCharsRef.current = maxCaptureChars;
+
+  const sendResizeIfChanged = (cols: number, rows: number) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const last = lastSentSizeRef.current;
+    if (last.cols === cols && last.rows === rows) return;
+    lastSentSizeRef.current = { cols, rows };
+    try {
+      ws.send(JSON.stringify({ type: "resize", cols, rows }));
+    } catch {
+      /* ignore */
+    }
+  };
 
   const appendCapture = (chunk: string) => {
     if (!captureEnabledRef.current) return;
@@ -84,7 +99,6 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
       },
       resize(cols: number, rows: number) {
         const term = xtermRef.current;
-        const ws = wsRef.current;
         if (!term) return;
         const safeCols = Math.max(cols || 80, 10);
         const safeRows = Math.max(rows || 24, 10);
@@ -93,13 +107,7 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
         } catch {
           /* ignore */
         }
-        if (ws?.readyState === WebSocket.OPEN) {
-          try {
-            ws.send(JSON.stringify({ type: "resize", cols: safeCols, rows: safeRows }));
-          } catch {
-            /* ignore */
-          }
-        }
+        sendResizeIfChanged(safeCols, safeRows);
       },
       paste(text: string) {
         const term = xtermRef.current;
@@ -165,6 +173,7 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
     if (!terminalRef.current) return;
     closingByCleanupRef.current = false;
     disposedRef.current = false;
+    lastSentSizeRef.current = { cols: 0, rows: 0 };
     setState("connecting");
 
     const TerminalCtor =
@@ -185,6 +194,7 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
       cursorBlink: true,
       fontFamily,
       fontSize,
+      ...(accessibilitySupport !== undefined ? { accessibilitySupport } : {}),
       theme: {
         background: theme?.background ?? "#1e1e1e",
         foreground: theme?.foreground,
@@ -216,7 +226,7 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
       fitAddon.fit();
       const cols = Math.max(term.cols || 80, 80);
       const rows = Math.max(term.rows || 24, 24);
-      ws.send(JSON.stringify({ type: "resize", cols, rows }));
+      sendResizeIfChanged(cols, rows);
     };
 
     ws.onmessage = (event) => {
@@ -283,11 +293,9 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
       } catch {
         /* ignore */
       }
-      if (ws.readyState === WebSocket.OPEN) {
-        const cols = Math.max(term.cols || 80, 80);
-        const rows = Math.max(term.rows || 24, 24);
-        ws.send(JSON.stringify({ type: "resize", cols, rows }));
-      }
+      const cols = Math.max(term.cols || 80, 80);
+      const rows = Math.max(term.rows || 24, 24);
+      sendResizeIfChanged(cols, rows);
     };
 
     window.addEventListener("resize", handleResize);
@@ -331,6 +339,7 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
     wsUrl,
     fontSize,
     fontFamily,
+    accessibilitySupport,
     theme?.background,
     theme?.foreground,
     theme?.cursor,
