@@ -45,6 +45,14 @@ export interface JabTermProps {
   fontSize?: number;
   /** Font family. Default: system monospace stack */
   fontFamily?: string;
+  /**
+   * xterm.js accessibility support mode.
+   *
+   * When set to `"on"`, xterm populates the accessibility tree (and in many setups
+   * also makes `.xterm-rows` contain textual content), which is useful for UI
+   * testing/automation that reads terminal output from the DOM.
+   */
+  accessibilitySupport?: "on" | "off" | "auto";
   /** xterm.js theme overrides. */
   theme?: {
     background?: string;

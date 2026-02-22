@@ -89,6 +89,7 @@ CI also regenerates these assets on pushes to `main` (so contributors typically 
 | `className` | `string` | — | CSS class for the outer container |
 | `fontSize` | `number` | `13` | Font size in pixels |
 | `fontFamily` | `string` | system monospace | Font family |
+| `accessibilitySupport` | `"on" \| "off" \| "auto"` | — | xterm accessibility support mode (set to `"on"` if you need to read terminal text from the DOM for automation) |
 | `theme` | `{ background?, foreground?, cursor? }` | `{ background: "#1e1e1e" }` | xterm.js theme overrides |
 
 The outer container also exposes `data-jabterm-state="connecting|open|closed"` to make UI tests (e.g. Playwright) wait reliably.
