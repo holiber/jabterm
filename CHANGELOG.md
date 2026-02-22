@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-02-22
+
+### Fixed
+
+- React: dedupe identical PTY resize messages (prevents redundant SIGWINCH / flicker). ([#22](https://github.com/holiber/jabterm/pull/22))
+- React: expose xterm `accessibilitySupport` option for DOM-readable text in canvas/WebGL mode. ([#22](https://github.com/holiber/jabterm/pull/22))
+
 ## [0.1.3] - 2026-02-21
 
 ### Fixed
