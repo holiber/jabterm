@@ -1,11 +1,27 @@
-# test-runner
+# jabtrunner
 
-Small, policy-light test runner intended to be copied between repos (or published).
+Just Another Browser Test Runner.
+
+Small, policy-light test runner intended to be copied between repos (or released as a GitHub tarball) without requiring an npm publish.
+
+## Install (from GitHub Releases)
+
+Add the `.tgz` asset URL from a release tag:
+
+```bash
+pnpm add -D https://github.com/holiber/jabterm/releases/download/jabtrunner-v0.1.0/jabtrunner-0.1.0.tgz
+```
+
+Or with npm:
+
+```bash
+npm i -D https://github.com/holiber/jabterm/releases/download/jabtrunner-v0.1.0/jabtrunner-0.1.0.tgz
+```
 
 ## CLI
 
 ```bash
-test-runner <suite> [--smoke] [--human] [--pkg <name>...] [--project <name>] [--allow-missing-project]
+jabtrunner <suite> [--smoke] [--human] [--pkg <name>...] [--project <name>] [--allow-missing-project]
 ```
 
 Suites:
@@ -27,7 +43,7 @@ Smoke rules (`--smoke`) apply to Playwright suites only:
 Human execution (`--human`) is orthogonal:
 
 - Playwright: `--headed`, `--workers=1`, `--trace=on`
-- Exposes `TEST_RUNNER_HUMAN=1` for test utilities (see `test-runner/human`)
+- Exposes `TEST_RUNNER_HUMAN=1` for test utilities (see `jabtrunner/human`)
 
 ## Artifacts
 
@@ -62,7 +78,7 @@ export default defineConfig({
 ## Test helper: `breath()`
 
 ```js
-import { breath } from "test-runner/human";
+import { breath } from "jabtrunner/human";
 
 await breath(300);
 ```
