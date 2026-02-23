@@ -1,0 +1,44 @@
+name: Release jabtrunner
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags:
+      - "jabtrunner-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate tag matches package version
+        if: startsWith(github.ref_name, 'jabtrunner-v')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#jabtrunner-v}"
+          PKG_VERSION="$(node -p "require('./packages/jabtrunner/package.json').version")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag version ($TAG_VERSION) does not match packages/jabtrunner version ($PKG_VERSION)"
+            exit 1
+          fi
+
+      - name: Build tarball (npm pack)
+        run: |
+          cd packages/jabtrunner
+          TARBALL="$(npm pack --silent)"
+          echo "TARBALL=$TARBALL" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release and upload tarball
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: packages/jabtrunner/${{ env.TARBALL }}
+

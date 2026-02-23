@@ -249,7 +249,7 @@ async function runPlaywright({
 }
 
 const argv = await yargs(hideBin(process.argv))
-  .scriptName("test-runner")
+  .scriptName("jabtrunner")
   .command(
     "$0 <suite>",
     "Run tests",
