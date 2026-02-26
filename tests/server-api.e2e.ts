@@ -284,5 +284,42 @@ test.describe("Server API — createJabtermServer", () => {
     ws.close();
     await server.close();
   });
+
+  test("shellIntegration emits commandEnd with exit code under zsh (precmd best-effort)", async () => {
+    const { execSync } = await import("child_process");
+    let zshPath: string | null = null;
+    try {
+      zshPath = execSync("command -v zsh", { stdio: ["ignore", "pipe", "ignore"] })
+        .toString("utf8")
+        .trim();
+    } catch {
+      zshPath = null;
+    }
+    test.skip(!zshPath, "zsh is not installed");
+
+    const server = createJabtermServer({
+      host: "127.0.0.1",
+      port: 0,
+      path: "/ws",
+      shell: zshPath!,
+      shellIntegration: true,
+    });
+    const addr = await server.listen();
+
+    const ws = new WsClient(wsUrl(addr.port, "/ws/cmdend-zsh"));
+    await waitForWsOpen(ws);
+    await waitForMatch(ws, /.+/s, 4000);
+
+    ws.send(Buffer.from("false\n"));
+    const raw = await waitForMatch(
+      ws,
+      /"type"\s*:\s*"commandEnd"[\s\S]*"exitCode"\s*:\s*1/,
+      8000,
+    );
+    expect(raw).toContain("\"commandEnd\"");
+
+    ws.close();
+    await server.close();
+  });
 });
 
