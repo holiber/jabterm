@@ -72,6 +72,15 @@ export interface JabtermServerOptions {
   /** Optional structured logger. */
   logger?: JabtermLogger;
   /**
+   * If true, enables best-effort shell integration for richer automation signals.
+   *
+   * Currently implemented for bash by injecting a `PROMPT_COMMAND` hook that
+   * emits an OSC marker which the server converts into structured WS messages.
+   *
+   * Default: false
+   */
+  shellIntegration?: boolean;
+  /**
    * Optional hook invoked on each connection to configure the PTY based on
    * terminalId and/or request metadata.
    */
@@ -105,9 +114,12 @@ interface Session {
   wsClosed: boolean;
   helloVersion?: number;
   onWsMessage: (message: Buffer | string) => void;
+  oscRemainder: string;
 }
 
 const JABTERM_PROTOCOL_VERSION = 1;
+
+const JABTERM_COMMAND_END_OSC_PREFIX = "\x1b]633;D;";
 
 function defaultLogger(): JabtermLogger {
   return {
@@ -116,6 +128,81 @@ function defaultLogger(): JabtermLogger {
     warn: (message, meta) => console.warn(`[jabterm] ${message}`, meta ?? ""),
     error: (message, meta) => console.error(`[jabterm] ${message}`, meta ?? ""),
   };
+}
+
+function isBashShell(shellPath: string): boolean {
+  const base = shellPath.split(/[\\/]/).pop()?.toLowerCase() ?? shellPath.toLowerCase();
+  return base === "bash" || base.endsWith("bash");
+}
+
+function applyShellIntegration(
+  enabled: boolean,
+  shell: string,
+  env: NodeJS.ProcessEnv,
+): NodeJS.ProcessEnv {
+  if (!enabled) return env;
+  if (!isBashShell(shell)) return env;
+
+  const existing = typeof env.PROMPT_COMMAND === "string" ? env.PROMPT_COMMAND : "";
+  if (existing.includes("__jabterm_pc")) return { ...env, JABTERM_SHELL_INTEGRATION: "1" };
+
+  const hook =
+    "__jabterm_pc(){ local ec=$?; printf '\\033]633;D;%s\\007' \"$ec\"; }; __jabterm_pc";
+  const merged = existing.trim() ? `${hook}; ${existing}` : hook;
+
+  return {
+    ...env,
+    JABTERM_SHELL_INTEGRATION: "1",
+    PROMPT_COMMAND: merged,
+  };
+}
+
+function extractCommandEndEvents(
+  input: string,
+  remainder: string,
+): { clean: string; remainder: string; exitCodes: number[] } {
+  const data = remainder + input;
+  const exitCodes: number[] = [];
+  const outParts: string[] = [];
+
+  let i = 0;
+  while (i < data.length) {
+    const start = data.indexOf(JABTERM_COMMAND_END_OSC_PREFIX, i);
+    if (start === -1) {
+      outParts.push(data.slice(i));
+      return { clean: outParts.join(""), remainder: "", exitCodes };
+    }
+
+    outParts.push(data.slice(i, start));
+
+    const payloadStart = start + JABTERM_COMMAND_END_OSC_PREFIX.length;
+    const bel = data.indexOf("\x07", payloadStart);
+    const st = data.indexOf("\x1b\\", payloadStart);
+
+    let end = -1;
+    let endLen = 0;
+    if (bel !== -1 && (st === -1 || bel < st)) {
+      end = bel;
+      endLen = 1;
+    } else if (st !== -1) {
+      end = st;
+      endLen = 2;
+    }
+
+    if (end === -1) {
+      // Incomplete OSC sequence; keep it for the next chunk.
+      const rem = data.slice(start);
+      return { clean: outParts.join(""), remainder: rem, exitCodes };
+    }
+
+    const payload = data.slice(payloadStart, end).trim();
+    const code = Number.parseInt(payload, 10);
+    if (Number.isFinite(code)) exitCodes.push(code);
+
+    i = end + endLen;
+  }
+
+  return { clean: outParts.join(""), remainder: "", exitCodes };
 }
 
 function normalizeBasePath(p: string | undefined): string {
@@ -153,6 +240,7 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
   const port = opts.port ?? 3223;
   const strictPort = opts.strictPort ?? false;
   const logger = opts.logger ?? defaultLogger();
+  const shellIntegration = opts.shellIntegration ?? false;
 
   const httpServer = http.createServer((req, res) => {
     res.statusCode = 404;
@@ -255,7 +343,8 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
       const cwd = extra.cwd ?? defaultCwd;
       const cols = Math.max(extra.cols ?? 80, 10);
       const rows = Math.max(extra.rows ?? 24, 10);
-      const ptyEnv = { ...env, ...(extra.env ?? {}) };
+      const ptyEnvRaw = { ...env, ...(extra.env ?? {}) };
+      const ptyEnv = applyShellIntegration(shellIntegration, shell, ptyEnvRaw);
       const args = extra.shellArgs ?? [];
 
       return pty.spawn(shell, args, {
@@ -310,6 +399,7 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
         wsClosed: false,
         helloVersion: undefined,
         onWsMessage: () => { },
+        oscRemainder: "",
       };
       sessions.add(session);
 
@@ -323,14 +413,30 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
       };
 
       ptyProcess.onData((data: string) => {
-        if (ws.readyState === WebSocket.OPEN) {
+        if (ws.readyState !== WebSocket.OPEN) return;
+        const { clean, remainder, exitCodes } = shellIntegration
+          ? extractCommandEndEvents(data, session.oscRemainder)
+          : { clean: data, remainder: "", exitCodes: [] as number[] };
+        session.oscRemainder = remainder;
+
+        if (clean) {
           try {
-            ws.send(data);
+            ws.send(clean);
           } catch (err) {
             logger.warn?.("ws_send_failed", {
               terminalId,
               error: err instanceof Error ? err.message : String(err),
             });
+          }
+        }
+
+        if (exitCodes.length > 0) {
+          for (const exitCode of exitCodes) {
+            try {
+              ws.send(JSON.stringify({ type: "commandEnd", exitCode }));
+            } catch {
+              /* ignore */
+            }
           }
         }
       });
@@ -439,6 +545,19 @@ export function createJabtermServer(opts: JabtermServerOptions = {}): JabtermSer
           ws.off("message", onWsMessage);
         } catch {
           /* ignore */
+        }
+        if (!session.wsClosed && ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(
+              JSON.stringify({
+                type: "ptyExit",
+                exitCode,
+                signal: signal ?? null,
+              }),
+            );
+          } catch {
+            /* ignore */
+          }
         }
         if (!session.wsClosed && ws.readyState === WebSocket.OPEN) {
           if (exitCode !== 0) {

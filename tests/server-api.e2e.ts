@@ -239,5 +239,50 @@ test.describe("Server API — createJabtermServer", () => {
 
     expect(result).toBe("error");
   });
+
+  test("sends ptyExit message before websocket close", async () => {
+    const server = createJabtermServer({
+      host: "127.0.0.1",
+      port: 0,
+      path: "/ws",
+    });
+    const addr = await server.listen();
+
+    const ws = new WsClient(wsUrl(addr.port, "/ws/exit"));
+    await waitForWsOpen(ws);
+    await waitForMatch(ws, /.+/s, 4000);
+
+    ws.send(Buffer.from("exit\n"));
+    const raw = await waitForMatch(ws, /"type"\s*:\s*"ptyExit"/, 8000);
+    expect(raw).toContain("\"ptyExit\"");
+
+    await new Promise((resolve) => ws.once("close", resolve));
+    await server.close();
+  });
+
+  test("shellIntegration emits commandEnd with exit code (bash best-effort)", async () => {
+    const server = createJabtermServer({
+      host: "127.0.0.1",
+      port: 0,
+      path: "/ws",
+      shellIntegration: true,
+    });
+    const addr = await server.listen();
+
+    const ws = new WsClient(wsUrl(addr.port, "/ws/cmdend"));
+    await waitForWsOpen(ws);
+    await waitForMatch(ws, /.+/s, 4000);
+
+    ws.send(Buffer.from("false\n"));
+    const raw = await waitForMatch(
+      ws,
+      /"type"\s*:\s*"commandEnd"[\s\S]*"exitCode"\s*:\s*1/,
+      8000,
+    );
+    expect(raw).toContain("\"commandEnd\"");
+
+    ws.close();
+    await server.close();
+  });
 });
 
