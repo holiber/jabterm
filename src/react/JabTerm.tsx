@@ -3,7 +3,13 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import * as Xterm from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import type { JabTermHandle, JabTermProps, JabTermState } from "./types.js";
+import type {
+  JabTermHandle,
+  JabTermProps,
+  JabTermState,
+  WriteAndWaitOptions,
+  WriteAndWaitResult,
+} from "./types.js";
 import type { Terminal as XtermTerminal } from "@xterm/xterm";
 
 const DEFAULT_FONT_FAMILY =
@@ -18,6 +24,9 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
     onOpen,
     onClose,
     onError,
+    onData,
+    onExit,
+    onCommandEnd,
     captureOutput = true,
     maxCaptureChars = 200_000,
     className,
@@ -43,6 +52,10 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
   const captureTotalRef = useRef<number>(0);
   const captureReadOffsetRef = useRef<number>(0);
   const decoderRef = useRef<TextDecoder | null>(null);
+
+  const lastExitCodeRef = useRef<number | null>(null);
+  const dataListenersRef = useRef<Set<(chunk: string) => void>>(new Set());
+  const commandEndListenersRef = useRef<Set<(exitCode: number) => void>>(new Set());
 
   captureEnabledRef.current = captureOutput;
   captureMaxCharsRef.current = maxCaptureChars;
@@ -165,6 +178,139 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
         const start = Math.min(Math.max(captureReadOffsetRef.current, 0), s.length);
         return s.length - start;
       },
+      getLastExitCode() {
+        return lastExitCodeRef.current;
+      },
+      waitForCommandEnd(timeoutMs?: number) {
+        const ws = wsRef.current;
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          return Promise.reject(new Error("WebSocket is not open"));
+        }
+        const timeout = Math.max(Number(timeoutMs ?? 30_000) || 0, 0);
+        return new Promise<number>((resolve, reject) => {
+          let done = false;
+          let timer: ReturnType<typeof setTimeout> | null = null;
+
+          const listener = (exitCode: number) => {
+            if (done) return;
+            done = true;
+            if (timer) clearTimeout(timer);
+            commandEndListenersRef.current.delete(listener);
+            resolve(exitCode);
+          };
+
+          commandEndListenersRef.current.add(listener);
+          if (timeout > 0) {
+            timer = setTimeout(() => {
+              if (done) return;
+              done = true;
+              commandEndListenersRef.current.delete(listener);
+              reject(new Error(`Timeout waiting for commandEnd (${timeout}ms)`));
+            }, timeout);
+          }
+        });
+      },
+      async writeAndWait(
+        input: string | Uint8Array | ArrayBuffer,
+        options?: WriteAndWaitOptions,
+      ): Promise<WriteAndWaitResult> {
+        const ws = wsRef.current;
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          throw new Error("WebSocket is not open");
+        }
+        if (disposedRef.current) {
+          throw new Error("Terminal is disposed");
+        }
+
+        const opts = options ?? {};
+        const quietMs = Math.max(Number(opts.quietMs ?? 300) || 0, 0);
+        const timeoutMs = Math.max(Number(opts.timeout ?? 30_000) || 0, 0);
+        const waitFor = typeof opts.waitFor === "string" && opts.waitFor ? opts.waitFor : null;
+        const waitForCommand = !!opts.waitForCommand;
+
+        return await new Promise<WriteAndWaitResult>((resolve, reject) => {
+          let done = false;
+          let output = "";
+          let exitCode: number | undefined = undefined;
+          let quietTimer: ReturnType<typeof setTimeout> | null = null;
+          let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
+
+          const cleanup = () => {
+            if (quietTimer) clearTimeout(quietTimer);
+            if (timeoutTimer) clearTimeout(timeoutTimer);
+            dataListenersRef.current.delete(onChunk);
+            commandEndListenersRef.current.delete(onCommandEndEvent);
+          };
+
+          const finishOk = () => {
+            if (done) return;
+            done = true;
+            cleanup();
+            resolve({ output, ...(exitCode !== undefined ? { exitCode } : {}) });
+          };
+
+          const finishErr = (err: unknown) => {
+            if (done) return;
+            done = true;
+            cleanup();
+            reject(err instanceof Error ? err : new Error(String(err)));
+          };
+
+          const armQuiet = () => {
+            if (waitFor || waitForCommand) return;
+            if (quietMs <= 0) {
+              finishOk();
+              return;
+            }
+            if (quietTimer) clearTimeout(quietTimer);
+            quietTimer = setTimeout(() => finishOk(), quietMs);
+          };
+
+          const onChunk = (chunk: string) => {
+            output += chunk;
+            if (waitFor && output.includes(waitFor)) {
+              finishOk();
+              return;
+            }
+            armQuiet();
+          };
+
+          const onCommandEndEvent = (code: number) => {
+            exitCode = code;
+            if (!waitForCommand) return;
+            finishOk();
+          };
+
+          dataListenersRef.current.add(onChunk);
+          commandEndListenersRef.current.add(onCommandEndEvent);
+
+          if (timeoutMs > 0) {
+            timeoutTimer = setTimeout(() => {
+              finishErr(new Error(`Timeout in writeAndWait (${timeoutMs}ms)`));
+            }, timeoutMs);
+          }
+
+          if (disposedRef.current) {
+            finishErr(new Error("Terminal disposed"));
+            return;
+          }
+
+          try {
+            if (typeof input === "string") {
+              ws.send(new TextEncoder().encode(input));
+            } else if (input instanceof ArrayBuffer) {
+              ws.send(input);
+            } else {
+              ws.send(input);
+            }
+          } catch (err) {
+            finishErr(err);
+            return;
+          }
+
+          armQuiet();
+        });
+      },
     }),
     [],
   );
@@ -241,18 +387,42 @@ const JabTerm = forwardRef<JabTermHandle, JabTermProps>(function JabTerm(
               appendCapture(`\nError: ${msg}\n`);
               return;
             }
+            if (parsed?.type === "ptyExit") {
+              const exitCode = Number(parsed.exitCode);
+              const signalRaw = parsed.signal;
+              const signal =
+                signalRaw === null || signalRaw === undefined ? null : Number(signalRaw);
+              if (Number.isFinite(exitCode)) {
+                onExit?.(exitCode, Number.isFinite(signal) ? signal : null);
+              }
+              return;
+            }
+            if (parsed?.type === "commandEnd") {
+              const exitCode = Number(parsed.exitCode);
+              if (Number.isFinite(exitCode)) {
+                lastExitCodeRef.current = exitCode;
+                onCommandEnd?.(exitCode);
+                for (const cb of commandEndListenersRef.current) cb(exitCode);
+              }
+              return;
+            }
           } catch {
             /* ignore */
           }
         }
         term.write(event.data);
         appendCapture(event.data);
+        onData?.(event.data);
+        for (const cb of dataListenersRef.current) cb(event.data);
       } else {
         const bytes = new Uint8Array(event.data as ArrayBuffer);
         term.write(bytes);
         try {
           if (!decoderRef.current) decoderRef.current = new TextDecoder();
-          appendCapture(decoderRef.current.decode(bytes, { stream: true }));
+          const decoded = decoderRef.current.decode(bytes, { stream: true });
+          appendCapture(decoded);
+          onData?.(decoded);
+          for (const cb of dataListenersRef.current) cb(decoded);
         } catch {
           /* ignore */
         }
