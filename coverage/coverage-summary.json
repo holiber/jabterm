@@ -1,28 +1,28 @@
 {
   "total": {
     "lines": {
-      "total": 390,
-      "covered": 222,
+      "total": 538,
+      "covered": 343,
       "skipped": 0,
-      "pct": 56.92307692307692
+      "pct": 63.7546468401487
     },
     "statements": {
-      "total": 390,
-      "covered": 222,
+      "total": 538,
+      "covered": 343,
       "skipped": 0,
-      "pct": 56.92307692307692
+      "pct": 63.7546468401487
     },
     "functions": {
-      "total": 25,
-      "covered": 11,
+      "total": 35,
+      "covered": 20,
       "skipped": 0,
-      "pct": 44
+      "pct": 57.14285714285714
     },
     "branches": {
-      "total": 63,
-      "covered": 24,
+      "total": 122,
+      "covered": 62,
       "skipped": 0,
-      "pct": 38.095238095238095
+      "pct": 50.81967213114754
     },
     "branchesTrue": {
       "total": 0,
@@ -33,28 +33,28 @@
   },
   "./src/react/JabTerm.tsx": {
     "lines": {
-      "total": 319,
-      "covered": 210,
+      "total": 467,
+      "covered": 331,
       "skipped": 0,
-      "pct": 65.83
+      "pct": 70.87
     },
     "functions": {
-      "total": 21,
-      "covered": 9,
+      "total": 31,
+      "covered": 18,
       "skipped": 0,
-      "pct": 42.85
+      "pct": 58.06
     },
     "statements": {
-      "total": 319,
-      "covered": 210,
+      "total": 467,
+      "covered": 331,
       "skipped": 0,
-      "pct": 65.83
+      "pct": 70.87
     },
     "branches": {
-      "total": 57,
-      "covered": 21,
+      "total": 116,
+      "covered": 59,
       "skipped": 0,
-      "pct": 36.84
+      "pct": 50.86
     }
   },
   "./src/react/index.ts": {
