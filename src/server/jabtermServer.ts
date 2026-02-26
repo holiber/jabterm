@@ -144,10 +144,12 @@ function applyShellIntegration(
   if (!isBashShell(shell)) return env;
 
   const existing = typeof env.PROMPT_COMMAND === "string" ? env.PROMPT_COMMAND : "";
-  if (existing.includes("__jabterm_pc")) return { ...env, JABTERM_SHELL_INTEGRATION: "1" };
+  if (existing.includes("]633;D;")) return { ...env, JABTERM_SHELL_INTEGRATION: "1" };
 
-  const hook =
-    "__jabterm_pc(){ local ec=$?; printf '\\033]633;D;%s\\007' \"$ec\"; }; __jabterm_pc";
+  // IMPORTANT: do not redefine a function inside PROMPT_COMMAND on every prompt,
+  // otherwise `$?` inside the function becomes the status of the function
+  // definition (usually 0) instead of the user's last command.
+  const hook = "printf '\\033]633;D;%s\\007' \"$?\"";
   const merged = existing.trim() ? `${hook}; ${existing}` : hook;
 
   return {
