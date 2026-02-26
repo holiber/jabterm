@@ -106,6 +106,120 @@ describe("<JabTerm />", () => {
     expect(ref.current!.readNew()).toBe("");
   });
 
+  it("calls onData for incoming output", async () => {
+    const onData = vi.fn();
+    render(<JabTerm wsUrl="ws://example.test/ws" onData={onData} />);
+
+    const ws = await waitFor(() => {
+      const cur = getMockWs();
+      expect(cur).toBeTruthy();
+      return cur;
+    });
+    act(() => ws.__open());
+
+    act(() => ws.__message("hello\n"));
+    expect(onData).toHaveBeenCalledWith("hello\n");
+  });
+
+  it("handles commandEnd messages (callback + handle helpers) without writing JSON to terminal", async () => {
+    const ref = createRef<JabTermHandle>();
+    const onCommandEnd = vi.fn();
+    render(<JabTerm wsUrl="ws://example.test/ws" ref={ref} onCommandEnd={onCommandEnd} />);
+
+    const ws = await waitFor(() => {
+      const cur = getMockWs();
+      expect(cur).toBeTruthy();
+      return cur;
+    });
+    act(() => ws.__open());
+
+    expect(ref.current!.getLastExitCode()).toBeNull();
+    const beforeWrites = lastTerminal.write.mock.calls.length;
+
+    const p = ref.current!.waitForCommandEnd(1000);
+    act(() => ws.__message(JSON.stringify({ type: "commandEnd", exitCode: 7 })));
+
+    await expect(p).resolves.toBe(7);
+    expect(ref.current!.getLastExitCode()).toBe(7);
+    expect(onCommandEnd).toHaveBeenCalledWith(7);
+    expect(lastTerminal.write.mock.calls.length).toBe(beforeWrites);
+    expect(ref.current!.readNew()).toBe("");
+  });
+
+  it("handles ptyExit messages via onExit without writing JSON to terminal", async () => {
+    const onExit = vi.fn();
+    render(<JabTerm wsUrl="ws://example.test/ws" onExit={onExit} />);
+
+    const ws = await waitFor(() => {
+      const cur = getMockWs();
+      expect(cur).toBeTruthy();
+      return cur;
+    });
+    act(() => ws.__open());
+
+    const beforeWrites = lastTerminal.write.mock.calls.length;
+    act(() => ws.__message(JSON.stringify({ type: "ptyExit", exitCode: 0, signal: null })));
+
+    expect(onExit).toHaveBeenCalledWith(0, null);
+    expect(lastTerminal.write.mock.calls.length).toBe(beforeWrites);
+  });
+
+  it("writeAndWait resolves on quiet output stabilization", async () => {
+    vi.useFakeTimers();
+    try {
+      const ref = createRef<JabTermHandle>();
+      render(<JabTerm wsUrl="ws://example.test/ws" ref={ref} />);
+      const ws = getMockWs();
+      act(() => ws.__open());
+
+      const p = ref.current!.writeAndWait("echo hi\n", { quietMs: 50, timeout: 1000 });
+      act(() => ws.__message("hi\n"));
+
+      await act(async () => {
+        vi.advanceTimersByTime(60);
+        await Promise.resolve();
+      });
+
+      await expect(p).resolves.toEqual({ output: "hi\n" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("writeAndWait resolves when waitFor marker appears", async () => {
+    const ref = createRef<JabTermHandle>();
+    render(<JabTerm wsUrl="ws://example.test/ws" ref={ref} />);
+    const ws = await waitFor(() => {
+      const cur = getMockWs();
+      expect(cur).toBeTruthy();
+      return cur;
+    });
+    act(() => ws.__open());
+
+    const p = ref.current!.writeAndWait("noop\n", { waitFor: "READY", timeout: 1000 });
+    act(() => ws.__message("not yet\n"));
+    act(() => ws.__message("READY\n"));
+
+    await expect(p).resolves.toEqual({ output: "not yet\nREADY\n" });
+  });
+
+  it("writeAndWait can resolve on commandEnd and return exitCode", async () => {
+    const ref = createRef<JabTermHandle>();
+    render(<JabTerm wsUrl="ws://example.test/ws" ref={ref} />);
+    const ws = await waitFor(() => {
+      const cur = getMockWs();
+      expect(cur).toBeTruthy();
+      return cur;
+    });
+    act(() => ws.__open());
+
+    const p = ref.current!.writeAndWait("false\n", { waitForCommand: true, timeout: 1000 });
+    act(() => ws.__message("running...\n"));
+    act(() => ws.__message(JSON.stringify({ type: "commandEnd", exitCode: 1 })));
+
+    await expect(p).resolves.toEqual({ output: "running...\n", exitCode: 1 });
+  });
+
   it("clamps resize and sends resize message when open", async () => {
     const ref = createRef<JabTermHandle>();
     render(<JabTerm wsUrl="ws://example.test/ws" ref={ref} />);

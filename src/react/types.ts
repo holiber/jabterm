@@ -2,6 +2,27 @@ import type { Terminal } from "@xterm/xterm";
 
 export type JabTermState = "connecting" | "open" | "closed";
 
+export interface WriteAndWaitOptions {
+  /**
+   * Resolve after this many ms of silence (no new output).
+   * Used only when neither `waitFor` nor `waitForCommand` is set.
+   *
+   * Default: 300
+   */
+  quietMs?: number;
+  /** Overall timeout in ms. Default: 30_000 */
+  timeout?: number;
+  /** Resolve once this substring appears in captured output. */
+  waitFor?: string;
+  /** Resolve on the next `commandEnd` event (requires server shell integration). */
+  waitForCommand?: boolean;
+}
+
+export interface WriteAndWaitResult {
+  output: string;
+  exitCode?: number;
+}
+
 export interface JabTermHandle {
   focus(): void;
   fit(): void;
@@ -17,6 +38,19 @@ export interface JabTermHandle {
   readNew(): string;
   /** Returns the character count of unread output since last readAll/readNew. */
   getNewCount(): number;
+  /** Returns the last command exit code observed via shell integration. */
+  getLastExitCode(): number | null;
+  /** Resolves with the next command exit code observed via shell integration. */
+  waitForCommandEnd(timeoutMs?: number): Promise<number>;
+  /**
+   * Send input and wait for completion conditions.
+   *
+   * The returned `output` contains only data received after the call begins.
+   */
+  writeAndWait(
+    input: string | Uint8Array | ArrayBuffer,
+    options?: WriteAndWaitOptions,
+  ): Promise<WriteAndWaitResult>;
 }
 
 export interface JabTermProps {
@@ -30,6 +64,12 @@ export interface JabTermProps {
   onClose?: (ev: CloseEvent) => void;
   /** Fires on WebSocket errors. */
   onError?: (ev: Event) => void;
+  /** Fires for each chunk of output received from the server. */
+  onData?: (data: string) => void;
+  /** Fires when the underlying PTY exits (before the WebSocket closes). */
+  onExit?: (exitCode: number, signal: number | null) => void;
+  /** Fires when shell integration reports a command exit code. */
+  onCommandEnd?: (exitCode: number) => void;
   /**
    * Capture terminal output into an internal buffer so imperative `read*()`
    * methods can be used for testing/automation.
